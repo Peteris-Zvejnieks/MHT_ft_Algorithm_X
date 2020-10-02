@@ -50,8 +50,6 @@ class Tracer():
             self._main_loop(window_width)
             self.trajectories = Trajectories(self.graph, self.special_nodes)
             print('Trajectory count: %i'%len(self.trajectories))
-            self.trajectory_stats.stats = []
-            for trajectory in self.trajectories: trajectory.get_stats(self.trajectory_stats)
 
     def _main_loop(self, window_width):
         for time in tqdm(range(self.time_range[0], self.time_range[1]), desc = 'Window width- %i'%window_width):
