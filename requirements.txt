@@ -1,0 +1,14 @@
+#pip install -r -requirements.txt
+
+algorithm-x
+opencv-python
+numpy
+pandas
+network
+typed-ast
+more-itertools
+tqdm
+matplotlib
+pillow
+imageio
+glob2
