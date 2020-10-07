@@ -23,7 +23,6 @@ class movement_likelihood_func(statFunc):
     def __init__(self, sig_displacement, k):
         likelihood_displ = lambda dr, dt  : norm.pdf(dr, 0, sig_displacement * dt)/norm.pdf(0, 0, sig_displacement * dt)
         likelihood_S     = lambda dS, sigS: norm.pdf(dS, 0, sigS)/norm.pdf(0,0,sigS)
-        #likelihood_acc   = lambda :
 
         def f(stop, start):
             stop, start = stop[0], start[0]
@@ -31,8 +30,8 @@ class movement_likelihood_func(statFunc):
             t1  , t2    = stop.ending[0], start.beginning[0]
             dt = t2 - t1
 
-            sig_S = (start.stats['sig_S'] + stop.stats['sig_S'])/2
-            dS    = start.stats['mu_S'] - stop.stats['mu_S']
+            sig_S = (start.sig_S + stop.sig_S)/2
+            dS    = start.mu_S - stop.mu_S
             b     = likelihood_S(dS, sig_S)
 
             try:
@@ -51,16 +50,32 @@ class movement_likelihood_func(statFunc):
                 except:
                     p2 = start.beginning[2:4]
                     dr      = np.linalg.norm(p2 - p1)
-                    mu_d    = (start.stats['mu_D'] + stop.stats['mu_D'])/2 * dt
-                    sigma_d = (start.stats['sig_D'] + stop.stats['sig_D'])/2 * dt
+                    mu_d    = (start.mu_V + stop.mu_V)/2 * dt
+                    sigma_d = (start.sig_V + stop.sig_V)/2 * dt
                     a       = norm.pdf(dr, mu_d, sigma_d)/norm.pdf(mu_d, mu_d, sigma_d)
-            finally:
-                #print(start, stop, k * a + (1 - k) * b)
-                return k * a + (1 - k) * b
+            finally: return k * a + (1 - k) * b
 
         super().__init__(f, [1,1])
 
-class new_or_gone_likelihood_func(statFunc):
+class new_or_gone_likelihood_func_Y(statFunc):
+    def __init__(self, a, b, c):
+        f0 = lambda x: 1/(1+np.exp(a*(x-b)))
+        def f(stop, start):
+            if c:
+                trajectory, dt = start[0], -1
+                t = trajectory.beginning[0] + dt
+                try:    y = trajectory(t)[1]
+                except: y = trajectory.beginning[3] + trajectory.mu_V * dt
+            else:
+                trajectory, dt = stop[0], 1
+                t = trajectory.ending[0] + dt
+                try:    y = trajectory(t)[1]
+                except: y = trajectory.ending[3]  + trajectory.mu_V * dt
+            return f0(y)
+
+        super().__init__(f, [1 - c, c])
+
+class new_or_gone_likelihood_func_X(statFunc):
     def __init__(self, a, b, c):
         f0 = lambda x: 1/(1+np.exp(a*(x-b)))
         def f(stop, start):
@@ -68,16 +83,16 @@ class new_or_gone_likelihood_func(statFunc):
                 trajectory, dt = start[0], -1
                 t = trajectory.beginning[0] + dt
                 try:    x = trajectory(t)[1]
-                except: x = trajectory.beginning[2] + trajectory.stats['mu_D'] * dt
+                except: x = trajectory.beginning[2] + trajectory.mu_V * dt
             else:
                 trajectory, dt = stop[0], 1
                 t = trajectory.ending[0] + dt
                 try:    x = trajectory(t)[1]
-                except: x = trajectory.ending[2]  + trajectory.stats['mu_D'] * dt
-            #print(x, f0(x))
+                except: x = trajectory.ending[2]  + trajectory.mu_V * dt
             return f0(x)
 
         super().__init__(f, [1 - c, c])
+
 
 class multi_bubble_likelihood_func(statFunc):
     def __init__(self, sig_displ, k, c):
@@ -105,7 +120,7 @@ class multi_bubble_likelihood_func(statFunc):
             for traject, time in zip(trajectories, ts):
                 try:
                     positions.append(traject(t))
-                    Ss.append(traject.stats['mu_S'])
+                    Ss.append(traject.mu_V)
                     dts.append(abs(time - t))
                 except: pass
 
@@ -117,11 +132,11 @@ class multi_bubble_likelihood_func(statFunc):
             else:
                 a=0
 
-            S       = np.sum(np.array([traject.stats['mu_S'] for traject in trajectories]))
-            sig_S   = np.sum(np.array([tr.stats['sig_S'] for tr in trajectories]))
+            S       = np.sum(np.array([traject.mu_V for traject in trajectories]))
+            sig_S   = np.sum(np.array([tr.sig_S for tr in trajectories]))
 
-            dS      = trajectory.stats['mu_S'] - S
-            S_sig   = (trajectory.stats['sig_S'] + sig_S)/2
+            dS      = trajectory.mu_S - S
+            S_sig   = (trajectory.sig_S + sig_S)/2
             b       = likelihood_S(dS, S_sig)
 
             return k * a + (1 - k) * b

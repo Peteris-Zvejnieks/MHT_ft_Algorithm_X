@@ -1,4 +1,3 @@
-from trajectories import Trajectories, Node_trajectory
 from visualizer import visualizer
 from PIL import Image
 from tqdm import tqdm
@@ -30,7 +29,7 @@ class Tracer():
     def __init__(self,
                  associator,
                  optimizer,
-                 trajectory_stats,
+                 node_trajectory,
                  max_occlusion,
                  quantile,
                  path):
@@ -39,17 +38,15 @@ class Tracer():
         self.path               = path
         self.optimizer          = optimizer
         self.associator         = associator
-        self.trajectory_stats   = trajectory_stats
+        self.node_trajectory    = node_trajectory
 
         self.time_range = np.array([np.min(self.dataset[:,0]), np.max(self.dataset[:,0])], dtype = int)
-        self._make_graph()
+        self._initialize_graph()
 
         iterr = iter(Fib(max_occlusion))
         for i, window_width in enumerate(iterr):
             self._eradicate_unlikely_connections(quantile)
             self._main_loop(window_width)
-            self.trajectories = Trajectories(self.graph, self.special_nodes)
-            print('Trajectory count: %i'%len(self.trajectories))
 
     def _main_loop(self, window_width):
         for time in tqdm(range(self.time_range[0], self.time_range[1]), desc = 'Window width- %i'%window_width):
@@ -103,9 +100,7 @@ class Tracer():
                 else: break
 
         nodes.sort(key = lambda x: x[0])
-        trajectory = Node_trajectory(self.graph.subgraph(set(nodes)))
-        trajectory.get_stats(self.trajectory_stats)
-        return trajectory
+        return self.node_trajectory(self.graph.subgraph(set(nodes)))
 
     def _eradicate_unlikely_connections(self, quantile):
         likelihoods             = nx.get_edge_attributes(self.graph, 'likelihood')
@@ -113,10 +108,10 @@ class Tracer():
         removables              = [edge for edge in self.graph.edges if likelihoods[edge] <= self.decision_boundary]
         self.graph.remove_edges_from(removables)
 
-    def _make_graph(self):
-        self.graph          = nx.DiGraph()
-        self.special_nodes = ['new', 'gone']
-        self.graph.add_nodes_from(self.special_nodes, data = 'im_speshal')
+    def _initialize_graph(self):
+        self.graph         = nx.DiGraph()
+        self.special_nodes = ['Entry', 'Exit']
+        self.graph.add_nodes_from(self.special_nodes, data = 'mommy calls me speshal')
 
         for adress, point in zip(np.array(self.dataset)[:,:2], np.array(self.dataset)):
             node = tuple(map(int, adress))
@@ -132,7 +127,7 @@ class Tracer():
     def dump_data(self, sub_folder = None, memory = 15, smallest_trajectories = 1):
         self.images = unzip_images(self.path)
         self.shape = self.images[0].shape
-        Visualizer = visualizer(self.images, self.trajectories)
+        Visualizer = visualizer(self.images, self.graph)
 
         if sub_folder is None:  output_path = self.path + '/Tracer Output'
         else:                   output_path = self.path + '/Tracer Output' + sub_folder
@@ -140,14 +135,14 @@ class Tracer():
         try: os.makedirs(output_path)
         except: pass
 
+        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph.gml', stringizer = lambda x: str(x))
+
         def save_func(path, imgs):
             try: os.mkdir(path)
             except FileExistsError:
                 for old_img in glob.glob(path+'/**.jpg'): os.remove(old_img)
             for i, x in tqdm(enumerate(imgs), desc = 'Saving: ' + path.split('/')[-1]):
                 imageio.imwrite(path+'/%i.jpg'%i, x)
-
-        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph.gml', stringizer = lambda x: str(x))
 
         save_func(output_path + '/families',          Visualizer.ShowFamilies())
         save_func(output_path + '/tracedIDs',         Visualizer.ShowHistory(memory, smallest_trajectories, 'ID'))
@@ -175,7 +170,7 @@ def unzip_images(path):
     mapper      = lambda x: scaler(imgFromZip(x)).astype(np.uint8)
     with zipfile.ZipFile('%s\\Compressed Data\\Shapes.zip'%path) as zp:
         names = zp.namelist()
-        try:    names.remove(*(lst := [x for x in names if len(x.split('/')[-1]) == 0 or x.split(',')[-1] == 'ini']))
+        try:    names.remove(*[x for x in names if len(x.split('/')[-1]) == 0 or x.split(',')[-1] == 'ini'])
         except: pass
         names.sort(key = lambda x: int(x.split('/')[-1].split('_')[-1].split('.')[0]))
         return list(map(mapper, tqdm(names, desc = 'Loading images ')))

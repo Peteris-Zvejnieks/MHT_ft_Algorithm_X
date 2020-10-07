@@ -24,6 +24,68 @@ class discrete_colormap():
     def __call__(self, n):
         return colorsys.hsv_to_rgb(self._get_hue(n%self.N), self._get_sat(), self._get_val())
 
+class Trajectories(list):
+    def __init__(self, graph, special_nodes):
+        self.digraph = graph
+        self.graph = graph.to_undirected()
+        self.special_nodes = special_nodes
+
+        self._get_trajectories()
+        self._get_events()
+        self._get_families()
+
+    def _get_trajectories(self):
+        tmp_digraph = self.digraph.copy()
+        tmp_digraph.remove_nodes_from(self.special_nodes)
+        for node in tmp_digraph.nodes:
+            if len(ins  := list(tmp_digraph.in_edges(node)))  > 1:
+                tmp_digraph.remove_edges_from(ins)
+            if len(outs := list(tmp_digraph.out_edges(node))) > 1:
+                tmp_digraph.remove_edges_from(outs)
+
+        tmp_graph = tmp_digraph.to_undirected()
+
+        self.paths = list(tmp_digraph.subgraph(c) for c in nx.connected_components(tmp_graph))
+        self.paths.sort(key = lambda x: -len(x.nodes))
+        super().__init__(map(Node_trajectory, self.paths))
+
+    def _find_by_node(self, node):
+        for i, x in enumerate(self):
+            if node in x.nodes: return i
+
+    def _get_events(self):
+        self.events = []
+        likelihoods = nx.get_edge_attributes(self.digraph, 'likelihood')
+
+        for node in self.digraph.nodes:
+            if len(ins  := list(self.digraph.in_edges(node)))  > 1:
+                if node in self.special_nodes:
+                    for iny in ins:
+                        self.events.append([[self._find_by_node(iny[0])],
+                                            [node],
+                                            likelihoods[iny]])
+                else:
+                    self.events.append([[self._find_by_node(iny[0]) for iny in ins],
+                                        [self._find_by_node(node)],
+                                        likelihoods[ins[0]]])
+
+            if len(outs := list(self.digraph.out_edges(node))) > 1:
+                if node in self.special_nodes:
+                    for outy in outs:
+                        self.events.append([[node],
+                                            [self._find_by_node(outy[1])],
+                                            likelihoods[outy]])
+                else:
+                    self.events.append([[self._find_by_node(node)],
+                                        [self._find_by_node(outy[1]) for outy in outs],
+                                        likelihoods[outs[0]]])
+
+    def _get_families(self):
+        tmp_graph = self.graph.copy()
+        tmp_graph.remove_nodes_from(self.special_nodes)
+        self.families = list(self.digraph.subgraph(c.union(set(self.special_nodes))) for c in nx.connected_components(tmp_graph))
+        self.families.sort(key = lambda graph: -len(list(graph.nodes)))
+
 class visualizer():
     def __init__(self, images, trajectories):
         self.width  = 2
@@ -119,13 +181,13 @@ class visualizer():
                 color = self._map_color(cmap(min(norm_likelihood, 1 - 1e-12)))
 
                 if type(u) is str:
-                    if u != 'new': raise KeyError('fek1')
+                    if u != 'Entry': raise KeyError('fek1')
                     self.family_photos[i,:,:] = cv2.circle(self.family_photos[i,:,:],
                                                            self._get_crd(data[v]),
                                                            int(2 * self.width),
                                                            color, self.width)
                 elif type(v) is str:
-                    if v != 'gone': raise KeyError('fek2')
+                    if v != 'Exit': raise KeyError('fek2')
                     self.family_photos[i,:,:] = cv2.circle(self.family_photos[i,:,:],
                                                            self._get_crd(data[u]),
                                                            int(3 * self.width),

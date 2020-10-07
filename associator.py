@@ -77,11 +77,11 @@ class comb_constr(Combination_constraint):
             #Area check
             S1, S2, sigs = 0, 0, 0
             for stop in stops:
-                S1   += stop.stats['mu_S']
-                sigs += stop.stats['sig_S'] / stop.stats['mu_S']
+                S1   += stop.mu_S
+                sigs += stop.sig_S / stop.mu_S
             for start in starts:
-                S2   += start.stats['mu_S']
-                sigs += start.stats['sig_S'] / start.stats['mu_S']
+                S2   += start.mu_S
+                sigs += start.sig_S / start.mu_S
             sigs     /= len(stops) + len(starts)
             if abs(S2 - S1)/max(S2, S1) < upsilon * sigs:
                 return True
@@ -108,13 +108,13 @@ class Associator():
         self.offset = len(group1)
         for i, obj in enumerate(group1):
             associables     = [j for j, y in enumerate(group2) if self.association_condition(obj, y)]
-            combinations    = self._getAllCombinations(associables, 'gone')
+            combinations    = self._getAllCombinations(associables, 'Exit')
             all_associations2.extend(combinations)
             all_associations1.extend([(i,) for x in combinations])
 
         for j, obj in enumerate(group2):
             associables     = [i for i, x in enumerate(group1) if self.association_condition(x, obj)]
-            combinations    = self._getAllCombinations(associables, 'new', 2)
+            combinations    = self._getAllCombinations(associables, 'Entry', 2)
             all_associations1.extend(combinations)
             all_associations2.extend([(j,) for x in combinations])
 

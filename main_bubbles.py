@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stat_funcs_bubbles import movement_likelihood_func, new_or_gone_likelihood_func, multi_bubble_likelihood_func
+from stat_funcs import movement_likelihood_func, new_or_gone_likelihood_func_Y, multi_bubble_likelihood_func
 from associator import Associator, asc_condition, comb_constr
 from optimizer import optimizer
-from trajectories import trajectory_stats_v1
+from trajectories import node_trajectory_with_stats
 from tracer import Tracer
 
 import glob
@@ -37,8 +37,8 @@ Move   = movement_likelihood_func(Sig_displacement1, K1)
 A = 0.1
 Boundary= 35
 Height  = 918
-New    = new_or_gone_likelihood_func(A, Boundary, 1)
-Gone   = new_or_gone_likelihood_func(-A, Height - Boundary, 0)
+New    = new_or_gone_likelihood_func_Y(A, Boundary, 1)
+Gone   = new_or_gone_likelihood_func_Y(-A, Height - Boundary, 0)
 
 Sig_displacement2 = 60
 K2 = 0.5
@@ -46,8 +46,7 @@ K2 = 0.5
 Merge  = multi_bubble_likelihood_func(Sig_displacement2, K2, 0)
 Split  = multi_bubble_likelihood_func(Sig_displacement2, K2, 1)
 
-Stat_funcs = [Move, New, Gone, Merge, Split]
-Optimizer     = optimizer(Stat_funcs)
+Optimizer     = optimizer([Move, New, Gone, Merge, Split])
 #%%
 Max_displacement_per_frame = 300
 Radius_multiplyer = 3
@@ -57,21 +56,20 @@ Asc_condition  = asc_condition(Max_displacement_per_frame, Radius_multiplyer, Mi
 Upsilon = 1.5
 Mu_v = 100000000
 Max_acc = 100
-
 Comb_constr = comb_constr(Upsilon, Mu_v, Max_acc)
-ASSociator = Associator(Asc_condition, Comb_constr, max_k = 1)
 
-Trajectory_stats = trajectory_stats_v1(60, 30, 0.4)
+ASSociator = Associator(Asc_condition, Comb_constr, max_k = 1)
+#%%
+mu_V       = 60
+sig_V      = 30
+r_sig_S    = 0.4
+node_trajectory = node_trajectory_with_stats(mu_V, sig_V, r_sig_S)
 
 #%%
 Max_occlusion = 3
 Quantile = 0.1
-tracer = Tracer(ASSociator, Optimizer, Trajectory_stats, Max_occlusion, Quantile, Sub_dir)
+tracer = Tracer(ASSociator, Optimizer, node_trajectory, Max_occlusion, Quantile, Sub_dir)
 #%%
-Indx = 5
+Indx = 6
 Prepend = 'test_%i_'%Indx
 tracer.dump_data('/'+Prepend+str(Max_occlusion), 15, 1)
-#%%
-# import networkx as nx
-# graph = tracer.graph
-# subgraphs =

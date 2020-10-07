@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stat_funcs_particles import movement_likelihood_func, new_or_gone_likelihood_func
+from stat_funcs import new_or_gone_likelihood_func_X, movement_likelihood_func
 from associator import Associator, asc_condition_particles, comb_constr
 from optimizer import optimizer
-from trajectories import trajectory_stats_v1
+from trajectories import node_trajectory_with_stats
 from tracer import Tracer
 
 import glob
