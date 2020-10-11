@@ -1,4 +1,4 @@
-from visualizer import visualizer
+from visualizerV2 import Visualizer, Graph_interpreter
 from PIL import Image
 from tqdm import tqdm
 import networkx as nx
@@ -9,21 +9,6 @@ import zipfile
 import glob
 import os
 import io
-
-class Fib:
-    def __init__(self, maxx):
-        self.max = maxx
-
-    def __iter__(self):
-        self.a = 1
-        self.b = 1
-        return self
-
-    def __next__(self):
-        fib = self.a
-        if fib > self.max: raise StopIteration
-        self.a, self.b = self.b, self.a + self.b
-        return fib
 
 class Tracer():
     def __init__(self,
@@ -47,6 +32,8 @@ class Tracer():
         for i, window_width in enumerate(iterr):
             self._eradicate_unlikely_connections(quantile)
             self._main_loop(window_width)
+            interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
+            print('Trajectory count :' + str(len(interpretation.trajectories)))
 
     def _main_loop(self, window_width):
         for time in tqdm(range(self.time_range[0], self.time_range[1]), desc = 'Window width- %i'%window_width):
@@ -62,18 +49,19 @@ class Tracer():
                 edges = []
                 for parent in parents:
                     try: parent = group1[parent].nodes[-1]
-                    except: pass
-
+                    except: p1, t1 = [0,0], -1e48
+                    else: p1, t1 = self.data[parent][2:4], self.data[parent][0]
                     for child in children:
                         try: child = group2[child].nodes[0]
-                        except: pass
-                        edges.append((parent, child, {'likelihood': likelihood}))
+                        except: p2, t2 = [0,0], 1e48
+                        else: p2, t2 = self.data[child][2:4], self.data[child][0]
+                        v = (((p2[0] - p1[0])**2 + (p2[1] - p1[1]))**0.5)/(t2-t1)
+                        edges.append((parent, child, {'likelihood': likelihood, 'velocity' : v}))
 
                 if any([any([self.data[x[0]][0] == time     for x in edges]),
                         any([self.data[x[1]][0] == time + 1 for x in edges]),
                         likelihood > self.decision_boundary]):
                     self.graph.add_edges_from(edges)
-
 
     def _get_groups(self, start, stop):
         nodes1, nodes2 = [], []
@@ -120,14 +108,15 @@ class Tracer():
             for i, special_node in enumerate(self.special_nodes):
                 edge = [special_node, node]
                 if i: edge.reverse()
-                self.graph.add_edge(*tuple(edge), likelihood = float(point[0] == self.time_range[i]))
+                self.graph.add_edge(*tuple(edge), likelihood = float(point[0] == self.time_range[i]), velocity = 1e-12)
 
         self.data = nx.get_node_attributes(self.graph, 'data')
 
     def dump_data(self, sub_folder = None, memory = 15, smallest_trajectories = 1):
         self.images = unzip_images(self.path)
         self.shape = self.images[0].shape
-        Visualizer = visualizer(self.images, self.graph)
+        interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
+        Vis = Visualizer(self.images, interpretation)
 
         if sub_folder is None:  output_path = self.path + '/Tracer Output'
         else:                   output_path = self.path + '/Tracer Output' + sub_folder
@@ -144,14 +133,14 @@ class Tracer():
             for i, x in tqdm(enumerate(imgs), desc = 'Saving: ' + path.split('/')[-1]):
                 imageio.imwrite(path+'/%i.jpg'%i, x)
 
-        save_func(output_path + '/families',          Visualizer.ShowFamilies())
-        save_func(output_path + '/tracedIDs',         Visualizer.ShowHistory(memory, smallest_trajectories, 'ID'))
-        #save_func(output_path + '/traced_velocities', Visualizer.ShowHistory(memory, smallest_trajectories, 'velocities'))
-        save_func(output_path + '/trajectories',      Visualizer.ShowTrajectories())
+        save_func(output_path + '/families',          Vis.ShowFamilies('likelihood'))
+        save_func(output_path + '/tracedIDs',         Vis.ShowHistory(memory, smallest_trajectories, 'ID'))
+        save_func(output_path + '/traced_velocities', Vis.ShowHistory(memory, smallest_trajectories, 'velocities'))
+        save_func(output_path + '/trajectories',      Vis.ShowTrajectories())
 
         map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
 
-        for i, track in enumerate(self.trajectories):
+        for i, track in enumerate(interpretation.trajectories):
             with open(output_path + '/trajectories/data_%i.csv'%i, 'w'): pass
             np.savetxt(output_path + '/trajectories/data_%i.csv'%i, track.data, delimiter=",")
 
@@ -160,9 +149,9 @@ class Tracer():
 
         with open(output_path + '/trajectories/events.csv', 'w') as file:
             events_str = ''
-            for event in self.trajectories.events: events_str += str(event) + '\n'
+            for event in interpretation.events: events_str += str(event) + '\n'
             file.write(events_str)
-        del Visualizer, self.images
+        del Vis, self.images
 
 def unzip_images(path):
     imgFromZip  = lambda name: np.repeat((np.asarray(Image.open(io.BytesIO(zp.read(name))), np.uint16))[:,:,np.newaxis],3,2)
@@ -173,4 +162,20 @@ def unzip_images(path):
         try:    names.remove(*[x for x in names if len(x.split('/')[-1]) == 0 or x.split(',')[-1] == 'ini'])
         except: pass
         names.sort(key = lambda x: int(x.split('/')[-1].split('_')[-1].split('.')[0]))
-        return list(map(mapper, tqdm(names, desc = 'Loading images ')))
+        images = list(map(mapper, tqdm(names, desc = 'Loading images ')))
+    return images
+
+class Fib:
+    def __init__(self, maxx):
+        self.max = maxx
+
+    def __iter__(self):
+        self.a = 1
+        self.b = 2
+        return self
+
+    def __next__(self):
+        fib = self.a
+        if fib > self.max: raise StopIteration
+        self.a, self.b = self.b, self.a + self.b
+        return fib

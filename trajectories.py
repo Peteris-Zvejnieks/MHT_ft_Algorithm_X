@@ -27,9 +27,10 @@ class node_trajectory_base():
 
         likelihoods = nx.get_edge_attributes(self.backbone, 'likelihood')
         self.likelihoods = np.array(list(map(lambda x: likelihoods[x], zip(self.nodes[:-1], self.nodes[1:]))))
+        velocities = nx.get_edge_attributes(self.backbone, 'velocity')
+        self.velocities = np.array(list(map(lambda x: velocities[x], zip(self.nodes[:-1], self.nodes[1:]))))
 
-    def interpolate(self, t, der = 0):
-        return np.array(interp.splev(t, self.tck, der = der))
+    def interpolate(self, t, der = 0): return np.array(interp.splev(t, self.tck, der = der))
 
     def _splinify(self):
         if self.data.shape[0] == 1: pass

@@ -1,6 +1,5 @@
 import  numpy as np
 from matplotlib import cm
-import itertools as itt
 from tqdm import tqdm
 import colorsys
 import copy
@@ -8,15 +7,11 @@ import cv2
 import networkx as nx
 
 class discrete_colormap():
-    def __init__(self, N, /, hue = 1, sat = 0.8, value = 0.8):
-        self.sat = saturation
-        self.val = value
-        self._get_hue = lambda n: (hue *  n%N) /  N
-        self._get_sat = lambda: sat + (1 - sat) * np.random.random()
-        self._get_val = lambda: val + (1 - val) * np.random.random()
-
-    def __call__(self, n):
-        return colorsys.hsv_to_rgb(self._get_hue(n), self._get_sat(), self._get_val())
+    def __init__(self, N, /, hue = 1, sat = 0.8, val = 0.8):
+        self.hue = lambda n: (hue *  n%N) /  N
+        self.sat = lambda: sat + (1 - sat) * np.random.random()
+        self.val = lambda: val + (1 - val) * np.random.random()
+    def __call__(self, n): return colorsys.hsv_to_rgb(self.hue(n), self.sat(), self.val())
 
 class Colorbar_overlay():
     def __init__(self, cmap, shape, /, relative_size = [0.15, 0.02], relative_pos = [0.6, 0.05]):
@@ -30,16 +25,10 @@ class Colorbar_overlay():
         colorbar = 255 * np.repeat(gradient, self.cb_shape[1], axis = 1)
         self.overlay = np.zeros(shape)
         self.overlay[self.pos[0]: self.pos[0] + self.cb_shape[0], self.pos[1]: self.pos[1] + self.cb_shape[1],:] = colorbar[:,:,:]
-        del(gradient, colorbar, relative_pos, relative_size, shape)
 
     def __call__(self, min_max):
-        overlay = cv2.putText(self.overlay, "{:.1e}".format(min_max[0]),
-                              (self.pos[1], self.pos[0] + self.cb_shape[0] + 30),
-                              cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
-
-        overlay = cv2.putText(overlay, "{:.1e}".format(min_max[1]),
-                              (self.pos[1], self.pos[0] - 10),
-                              cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
+        overlay = cv2.putText(self.overlay, "{:.1e}".format(min_max[0]), (self.pos[1], self.pos[0] + self.cb_shape[0] + 30),    cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
+        overlay = cv2.putText(     overlay, "{:.1e}".format(min_max[1]), (self.pos[1], self.pos[0] - 10),                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
         return overlay
 
 class Graph_interpreter():
@@ -52,7 +41,7 @@ class Graph_interpreter():
         self._families()
 
     def _find_by_node(self, node):
-        for i, x in enumerate(self.trajectories): 
+        for i, x in enumerate(self.trajectories):
             if node in x.nodes: return i
 
     def _trajectories(self):
@@ -64,61 +53,111 @@ class Graph_interpreter():
         tmp_graph = tmp_graph.to_undirected()
         self.paths = list(self.graph.subgraph(c) for c in nx.connected_components(tmp_graph))
         self.paths.sort(key = lambda x: -len(x.nodes))
-        self.trajectories = map(self.node_trajectory, self.paths)
-        del(tmp_graph, c, ins, outs)
+        self.trajectories = list(map(self.node_trajectory, self.paths))
 
     def _events(self):
         self.events = []
-        likelihoods = nx.get_edge_attributes(self.digraph, 'likelihood')
+        likelihoods = nx.get_edge_attributes(self.graph, 'likelihood')
         for entry in list(self.graph.out_edges(self.special_nodes[0])):   self.events.append([[self.special_nodes[0]],    [entry[1]],                 likelihoods[entry]])
-        for exit  in list(self.graph.in_edges( self.special_nodes[1])):   self.events.append([[exit[0]],                  [self.special_nodes[1]],    likelihoods[exit]])
+        for exitt in list(self.graph.in_edges( self.special_nodes[1])):   self.events.append([[exitt[0]],                 [self.special_nodes[1]],    likelihoods[exitt]])
         self.graph.remove_nodes_from(self.special_nodes)
-        for node in self.graph.nodes: 
+        for node in self.graph.nodes:
             if len(ins  := list(self.graph.in_edges( node))) > 1: self.events.append([list(map(lambda edge: self._find_by_node(edge[0]), ins)), [self._find_by_node(node)],  likelihoods[ ins[0]]])
             if len(outs := list(self.graph.out_edges(node))) > 1: self.events.append([[self._find_by_node(node)], list(map(lambda edge: self._find_by_node(edge[1]), outs)), likelihoods[outs[1]]])
-        del(entry, exit, ins, outs, node, likelihoods)
 
     def _families(self):
-        tmp_graph = self.graph.copy().to_undirected()        
-        tmp_graph.remove_nodes_from(self.special_nodes)        
+        tmp_graph = self.graph.copy().to_undirected()
+        tmp_graph.remove_nodes_from(self.special_nodes)
         self.families = list(self.graph.subgraph(c.union(set(self.special_nodes))) for c in nx.connected_components(tmp_graph))
         self.families.sort(key = lambda graph: -len(list(graph.nodes)))
-        del(tmp_graph, c)
 
 class Visualizer():
     def __init__(self, images, interpretation, /, width = 2):
         self.images = images
         self.shape  = images[0].shape
         self.interpretation = interpretation
+        self.trajectories = self.interpretation.trajectories
         self.widht = 2
-        self.data = nx.get_node_atributes(self.interpretation.graph, 'data')
+        self.data = nx.get_node_attributes(self.interpretation.graph, 'data')
 
-    def _get_node_crd(self, node): return (int(self.data[node][2]), self.shape[0] - int(self.data[node][3]))
-
-    def _draw_edge(self, img, edge, color):
-        u, v = edge
-        try: crd1 = self._get_node_crd(u)
-        except: img = cv2.circle(img, self._get_node_crd(v), int(2 * self.width), color, self.width)
-        try: crd2 = self._get_node_crd(v)
-        except: img = cv2.circle(img, crd1, int(3 * self.width), color, self.width)
-
-
-    def _map_color(self, color): return tuple(map(lambda x: 255*x, color))[:3]
-
+    def _get_node_crd(self, node):  return (int(self.data[node][2]), self.shape[0] - int(self.data[node][3]))
+    def _map_color(self, color):    return tuple(map(lambda x: 255*x, color))[:3]
     def _normalizer(self, value, min_max):
         num = value - min_max[0]
         if (den := min_max[1] - min_max[0]) == 0:   return 1
         else:                                       return num / den
 
-    def ShowFamilies(self):
+    def _draw_edge(self, img, edge, color):
+        u, v = edge
+        try: crd1 = self._get_node_crd(u)
+        except: img = cv2.circle(img, self._get_node_crd(v), int(2 * self.width), color, self.width)
+        else:
+            try: crd2 = self._get_node_crd(v)
+            except: img = cv2.circle(img, crd1, int(3 * self.width), color, self.width)
+            else: img = cv2.line(img, crd1, crd2, color, self.width)
+        finally: return img
+
+    def ShowFamilies(self, key = 'likelihood'):
         cmap = cm.plasma
+        color_bar_gen = Colorbar_overlay(cmap, self.shape[:-1])
         families = self.interpretation.families
-        self.family_photos = np.zeros((len(families),) + self.shape, dtype = np.uint8)
+        family_photos = np.zeros((len(families),) + self.shape, dtype = np.uint8)
         for i, family in tqdm(enumerate(families), desc = 'Drawing families '):
-            likelihoods = nx.get_edge_attributes(family, 'likelihood')
-            min_max     = [min( tuple(likelihoods.values()) + (1,)), max( tuple(likelihoods.values()) + (0,))]
-            for edge in likelihoods.keys():
-                color = self._map_color(min(1 - 1e-12, self._normalizer(likelihoods[edge], min_max)))
+            values = nx.get_edge_attributes(family, key)
+            min_max = [min(tuple(values.values()) + (1e3,)), max(tuple(values.values()) + (0,))]
+            for edge in values.keys():
+                color = self._map_color(cmap(min(1 - 1e-12, self._normalizer(values[edge], min_max))))
+                family_photos[i] = self._draw_edge(family_photos[i], edge, color)
+            color_bar = color_bar_gen(min_max)
+            family_photos[i] = np.where(color_bar != 0, color_bar, family_photos[i])
+        return family_photos
 
+    def ShowHistory(self, memory = 15, min_trajectory_size = 1, key = 'velocity'):
+        events = self.interpretation.events
+        images = copy.deepcopy(self.images)
+        dcmap = discrete_colormap(memory * 2)
+        cmap = cm.plasma
+        if key != 'ID': values = nx.get_edge_atributes(self.interpretation.graph, key)
+        for i, tr in tqdm(enumerate(self.trajectories), desc = 'Drawing ' + key + ' history '):
+            if len(tr) < min_trajectory_size: continue
+            if key != 'ID': min_max = [min(tuple(values.values()) + (1e3,)), max(tuple(values.values()) + (0,))]
+            color = self._map_color(dcmap(i))
+            for edge in zip(tr.nodes[:-1], tr.nodes[1:]):
+                t0 = self.data[edge[1]][0]
+                if key != 'ID': color = self._map_color(cmap(self._normalizer(values[edge], min_max)))
+                for t in range(t0, t0 + memory): images[t - 1] = self._draw_edge(images[t - 1], edge, color)
+        for event in events:
+            stops, starts, likelihood = event
+            if type(stops[0]) is str:
+                ID = starts[0]
+                if len(self.trajectories[ID]) < min_trajectory_size: continue
+                R, color = int(self.width * 2), (0,  0, 255)
+                t0 = int(self.trajectories[starts[0]].data[0, 0])
+                crd = self._get_crd(self.trajectories[ID].data[0,:])
+                f = lambda x: cv2.circle(x, crd, R, color, self.width)
+            elif type(starts[0]) is str:
+                ID = stops[0]
+                if len(self.trajectories[ID]) < min_trajectory_size: continue
+                R, color = int(self.width * 3), (0, 255, 0)
+                t0 = int(self.trajectories[ID].data[-1, 0])
+                crd = self._get_crd(self.trajectories[ID].data[-1,:])
+                f = lambda x: cv2.circle(x, crd, R, color, self.width)
+            elif len(stops) > 1:
+                t0 = int(self.trajectories[starts[0]].data[0, 0])
+                f = lambda x: self._draw_merger(x, stops, starts[0])
+            elif len(starts) > 1:
+                t0 = int(self.trajectories[stops[0]].data[-1,0])
+                f = lambda x: self._draw_split(x, stops[0], starts)
+            for t in range(t0, min(len(images), t0 + memory)): images[t - 1] = f(images[t - 1])
+            return images
 
-
+    def ShowTrajectories(self, key = 'velocity'):
+        cmap = cm.plasma
+        imgs = np.zeros((len(self.trajectories),) + self.shape, dtype=np.uint8)
+        for i, tr in tqdm(enumerate(self.trajectories), desc = 'Drawing trajectories '):
+            values = nx.get_edge_atributes(tr.backbone, key)
+            min_max = [min(tuple(values.values()) + (1e3,)), max(tuple(values.values()) + (0,))]
+            for edge in zip(tr.nodes[:-1], tr.nodes[1:]):
+                color = self._map_color(cmap(self._normalizer(values[edge], min_max)))
+                imgs[i] = self._draw_edge(imgs[i], edge, color)
+        return imgs

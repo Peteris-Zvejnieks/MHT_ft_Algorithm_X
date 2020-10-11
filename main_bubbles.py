@@ -66,10 +66,10 @@ r_sig_S    = 0.4
 node_trajectory = node_trajectory_with_stats(mu_V, sig_V, r_sig_S)
 
 #%%
-Max_occlusion = 3
+Max_occlusion = 1
 Quantile = 0.1
 tracer = Tracer(ASSociator, Optimizer, node_trajectory, Max_occlusion, Quantile, Sub_dir)
 #%%
-Indx = 6
+Indx = 7
 Prepend = 'test_%i_'%Indx
 tracer.dump_data('/'+Prepend+str(Max_occlusion), 15, 1)
