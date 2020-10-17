@@ -85,9 +85,6 @@ class node_trajectory_with_stats():
             trajectory.mu_V    = self.mu_V0
             trajectory.sig_V   = self.sig_V0
             trajectory.mu_S    = np.average(trajectory.data[:,5])
-            trajectory.sig_S   = self.r_sig_S0
+            trajectory.sig_S   = trajectory.mu_S * self.r_sig_S0
         else: trajectory._get_stats()
         return trajectory
-
-
-

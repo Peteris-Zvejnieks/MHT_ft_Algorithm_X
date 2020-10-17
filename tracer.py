@@ -32,11 +32,11 @@ class Tracer():
         for i, window_width in enumerate(iterr):
             self._eradicate_unlikely_connections(quantile)
             self._main_loop(window_width)
-            interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
+            interpretation = Graph_interpreter(self.graph.copy(), self.special_nodes, self.node_trajectory)
             print('Trajectory count :' + str(len(interpretation.trajectories)))
 
     def _main_loop(self, window_width):
-        for time in tqdm(range(self.time_range[0], self.time_range[1]), desc = 'Window width- %i'%window_width):
+        for time in tqdm(range(self.time_range[0], self.time_range[1]), desc = 'Window width - %i'%window_width):
             group1, group2 = self._get_groups(time, time + window_width)
             if len(group1) == len(group2) == 0: continue
 

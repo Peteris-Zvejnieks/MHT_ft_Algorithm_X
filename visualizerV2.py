@@ -15,20 +15,19 @@ class discrete_colormap():
 
 class Colorbar_overlay():
     def __init__(self, cmap, shape, /, relative_size = [0.15, 0.02], relative_pos = [0.6, 0.05]):
-        relative_size, relative_pos  = np.array(relative_size), np.array(relative_pos)
-        shape = np.array(shape)
-
-        self.cb_shape = (shape * relative_size).astype(np.int)
-        self.pos = (shape * relative_pos).astype(np.int)
+        relative_size, relative_pos, shapeXY  = np.array(relative_size), np.array(relative_pos), np.array(shape[:-1])
+        self.cb_shape = (shapeXY * relative_size).astype(np.int)
+        self.pos = (shapeXY * relative_pos).astype(np.int)
 
         gradient = np.swapaxes(cmap(np.linspace(1, 0, self.cb_shape[0]))[:,:-1,np.newaxis], 1, 2)
         colorbar = 255 * np.repeat(gradient, self.cb_shape[1], axis = 1)
         self.overlay = np.zeros(shape)
-        self.overlay[self.pos[0]: self.pos[0] + self.cb_shape[0], self.pos[1]: self.pos[1] + self.cb_shape[1],:] = colorbar[:,:,:]
+        self.overlay[self.pos[0]: self.pos[0] + self.cb_shape[0], self.pos[1]: self.pos[1] + self.cb_shape[1]] = colorbar
 
     def __call__(self, min_max):
-        overlay = cv2.putText(self.overlay, "{:.1e}".format(min_max[0]), (self.pos[1], self.pos[0] + self.cb_shape[0] + 30),    cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
-        overlay = cv2.putText(     overlay, "{:.1e}".format(min_max[1]), (self.pos[1], self.pos[0] - 10),                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
+        overlay = copy.deepcopy(self.overlay)
+        overlay = cv2.putText(overlay, "{:.1e}".format(min_max[0]), (self.pos[1], self.pos[0] + self.cb_shape[0] + 30),    cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
+        overlay = cv2.putText(overlay, "{:.1e}".format(min_max[1]), (self.pos[1], self.pos[0] - 10),                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
         return overlay
 
 class Graph_interpreter():
@@ -77,15 +76,15 @@ class Visualizer():
         self.shape  = images[0].shape
         self.interpretation = interpretation
         self.trajectories = self.interpretation.trajectories
-        self.widht = 2
+        self.width = 2
         self.data = nx.get_node_attributes(self.interpretation.graph, 'data')
 
     def _get_node_crd(self, node):  return (int(self.data[node][2]), self.shape[0] - int(self.data[node][3]))
     def _map_color(self, color):    return tuple(map(lambda x: 255*x, color))[:3]
     def _normalizer(self, value, min_max):
         num = value - min_max[0]
-        if (den := min_max[1] - min_max[0]) == 0:   return 1
-        else:                                       return num / den
+        if (den := min_max[1] - min_max[0]) == 0:   return 1 - 1e-12
+        else:                                       return min(num / den, 1 - 1e-12)
 
     def _draw_edge(self, img, edge, color):
         u, v = edge
@@ -99,14 +98,14 @@ class Visualizer():
 
     def ShowFamilies(self, key = 'likelihood'):
         cmap = cm.plasma
-        color_bar_gen = Colorbar_overlay(cmap, self.shape[:-1])
+        color_bar_gen = Colorbar_overlay(cmap, self.shape)
         families = self.interpretation.families
         family_photos = np.zeros((len(families),) + self.shape, dtype = np.uint8)
         for i, family in tqdm(enumerate(families), desc = 'Drawing families '):
             values = nx.get_edge_attributes(family, key)
             min_max = [min(tuple(values.values()) + (1e3,)), max(tuple(values.values()) + (0,))]
             for edge in values.keys():
-                color = self._map_color(cmap(min(1 - 1e-12, self._normalizer(values[edge], min_max))))
+                color = self._map_color(cmap(self._normalizer(values[edge], min_max)))
                 family_photos[i] = self._draw_edge(family_photos[i], edge, color)
             color_bar = color_bar_gen(min_max)
             family_photos[i] = np.where(color_bar != 0, color_bar, family_photos[i])
@@ -117,15 +116,15 @@ class Visualizer():
         images = copy.deepcopy(self.images)
         dcmap = discrete_colormap(memory * 2)
         cmap = cm.plasma
-        if key != 'ID': values = nx.get_edge_atributes(self.interpretation.graph, key)
+        if key != 'ID': values = nx.get_edge_attributes(self.interpretation.graph, key)
         for i, tr in tqdm(enumerate(self.trajectories), desc = 'Drawing ' + key + ' history '):
             if len(tr) < min_trajectory_size: continue
             if key != 'ID': min_max = [min(tuple(values.values()) + (1e3,)), max(tuple(values.values()) + (0,))]
             color = self._map_color(dcmap(i))
             for edge in zip(tr.nodes[:-1], tr.nodes[1:]):
-                t0 = self.data[edge[1]][0]
+                t0 = int(self.data[edge[1]][0])
                 if key != 'ID': color = self._map_color(cmap(self._normalizer(values[edge], min_max)))
-                for t in range(t0, t0 + memory): images[t - 1] = self._draw_edge(images[t - 1], edge, color)
+                for t in range(t0, min(len(images), t0 + memory)): images[t - 1] = self._draw_edge(images[t - 1], edge, color)
         for event in events:
             stops, starts, likelihood = event
             if type(stops[0]) is str:
@@ -149,13 +148,29 @@ class Visualizer():
                 t0 = int(self.trajectories[stops[0]].data[-1,0])
                 f = lambda x: self._draw_split(x, stops[0], starts)
             for t in range(t0, min(len(images), t0 + memory)): images[t - 1] = f(images[t - 1])
-            return images
+        return images
+
+    def _draw_merger(self, img, starts, stop):
+        color=  (255, 255, 0)
+        crd2 = self._get_node_crd(self.trajectories[stop].nodes[0])
+        for start in starts:
+            crd1 = self._get_node_crd(self.trajectories[start].nodes[-1])
+            img = cv2.arrowedLine(img, crd1, crd2, color, self.width)
+        return img
+
+    def _draw_split(self, img, start, stops):
+        color = (255, 0, 255)
+        crd1 = self._get_node_crd(self.trajectories[start].node[-1])
+        for stop in stops:
+            crd2 = self._get_node_crd(self.trajectories[stop].node[0])
+            img = cv2.arrowedLine(img, crd1, crd2, color, self.width)
+        return img
 
     def ShowTrajectories(self, key = 'velocity'):
         cmap = cm.plasma
         imgs = np.zeros((len(self.trajectories),) + self.shape, dtype=np.uint8)
         for i, tr in tqdm(enumerate(self.trajectories), desc = 'Drawing trajectories '):
-            values = nx.get_edge_atributes(tr.backbone, key)
+            values = nx.get_edge_attributes(tr.backbone, key)
             min_max = [min(tuple(values.values()) + (1e3,)), max(tuple(values.values()) + (0,))]
             for edge in zip(tr.nodes[:-1], tr.nodes[1:]):
                 color = self._map_color(cmap(self._normalizer(values[edge], min_max)))
