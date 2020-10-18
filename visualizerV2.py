@@ -56,13 +56,14 @@ class Graph_interpreter():
 
     def _events(self):
         self.events = []
+        tmp_graph = self.graph.copy()
         likelihoods = nx.get_edge_attributes(self.graph, 'likelihood')
-        for entry in list(self.graph.out_edges(self.special_nodes[0])):   self.events.append([[self.special_nodes[0]],    [entry[1]],                 likelihoods[entry]])
-        for exitt in list(self.graph.in_edges( self.special_nodes[1])):   self.events.append([[exitt[0]],                 [self.special_nodes[1]],    likelihoods[exitt]])
-        self.graph.remove_nodes_from(self.special_nodes)
-        for node in self.graph.nodes:
-            if len(ins  := list(self.graph.in_edges( node))) > 1: self.events.append([list(map(lambda edge: self._find_by_node(edge[0]), ins)), [self._find_by_node(node)],  likelihoods[ ins[0]]])
-            if len(outs := list(self.graph.out_edges(node))) > 1: self.events.append([[self._find_by_node(node)], list(map(lambda edge: self._find_by_node(edge[1]), outs)), likelihoods[outs[1]]])
+        for entry in list(tmp_graph.out_edges(self.special_nodes[0])):   self.events.append([[self.special_nodes[0]],    [self._find_by_node(entry[1])],                 likelihoods[entry]])
+        for exitt in list(tmp_graph.in_edges( self.special_nodes[1])):   self.events.append([[self._find_by_node(exitt[0])],                 [self.special_nodes[1]],    likelihoods[exitt]])
+        tmp_graph.remove_nodes_from(self.special_nodes)
+        for node in tmp_graph.nodes:
+            if len(ins  := list(tmp_graph.in_edges( node))) > 1: self.events.append([list(map(lambda edge: self._find_by_node(edge[0]), ins)), [self._find_by_node(node)],  likelihoods[ ins[0]]])
+            if len(outs := list(tmp_graph.out_edges(node))) > 1: self.events.append([[self._find_by_node(node)], list(map(lambda edge: self._find_by_node(edge[1]), outs)), likelihoods[outs[1]]])
 
     def _families(self):
         tmp_graph = self.graph.copy().to_undirected()
@@ -132,14 +133,14 @@ class Visualizer():
                 if len(self.trajectories[ID]) < min_trajectory_size: continue
                 R, color = int(self.width * 2), (0,  0, 255)
                 t0 = int(self.trajectories[starts[0]].data[0, 0])
-                crd = self._get_crd(self.trajectories[ID].data[0,:])
+                crd = self._get_node_crd(self.trajectories[ID].nodes[0])
                 f = lambda x: cv2.circle(x, crd, R, color, self.width)
             elif type(starts[0]) is str:
                 ID = stops[0]
                 if len(self.trajectories[ID]) < min_trajectory_size: continue
                 R, color = int(self.width * 3), (0, 255, 0)
                 t0 = int(self.trajectories[ID].data[-1, 0])
-                crd = self._get_crd(self.trajectories[ID].data[-1,:])
+                crd = self._get_node_crd(self.trajectories[ID].nodes[-1])
                 f = lambda x: cv2.circle(x, crd, R, color, self.width)
             elif len(stops) > 1:
                 t0 = int(self.trajectories[starts[0]].data[0, 0])
@@ -160,14 +161,15 @@ class Visualizer():
 
     def _draw_split(self, img, start, stops):
         color = (255, 0, 255)
-        crd1 = self._get_node_crd(self.trajectories[start].node[-1])
+        crd1 = self._get_node_crd(self.trajectories[start].nodes[-1])
         for stop in stops:
-            crd2 = self._get_node_crd(self.trajectories[stop].node[0])
+            crd2 = self._get_node_crd(self.trajectories[stop].nodes[0])
             img = cv2.arrowedLine(img, crd1, crd2, color, self.width)
         return img
 
     def ShowTrajectories(self, key = 'velocity'):
         cmap = cm.plasma
+        color_bar_gen = Colorbar_overlay(cmap, self.shape)
         imgs = np.zeros((len(self.trajectories),) + self.shape, dtype=np.uint8)
         for i, tr in tqdm(enumerate(self.trajectories), desc = 'Drawing trajectories '):
             values = nx.get_edge_attributes(tr.backbone, key)
@@ -175,4 +177,6 @@ class Visualizer():
             for edge in zip(tr.nodes[:-1], tr.nodes[1:]):
                 color = self._map_color(cmap(self._normalizer(values[edge], min_max)))
                 imgs[i] = self._draw_edge(imgs[i], edge, color)
+            color_bar = color_bar_gen(min_max)
+            imgs[i] = np.where(color_bar != 0, color_bar, imgs[i])
         return imgs

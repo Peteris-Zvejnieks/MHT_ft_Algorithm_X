@@ -55,7 +55,7 @@ class Tracer():
                         try: child = group2[child].nodes[0]
                         except: p2, t2 = [0,0], 1e48
                         else: p2, t2 = self.data[child][2:4], self.data[child][0]
-                        v = (((p2[0] - p1[0])**2 + (p2[1] - p1[1]))**0.5)/(t2-t1)
+                        v = (((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)**0.5)/(t2-t1)
                         edges.append((parent, child, {'likelihood': likelihood, 'velocity' : v}))
 
                 if any([any([self.data[x[0]][0] == time     for x in edges]),
@@ -113,33 +113,26 @@ class Tracer():
         self.data = nx.get_node_attributes(self.graph, 'data')
 
     def dump_data(self, sub_folder = None, memory = 15, smallest_trajectories = 1):
-        self.images = unzip_images(self.path)
+        self.images = unzip_images('%s\\Compressed Data\\Shapes.zip'%self.path)
         self.shape = self.images[0].shape
-        interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
-        Vis = Visualizer(self.images, interpretation)
 
         if sub_folder is None:  output_path = self.path + '/Tracer Output'
         else:                   output_path = self.path + '/Tracer Output' + sub_folder
-
         try: os.makedirs(output_path)
         except: pass
-
-        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph.gml', stringizer = lambda x: str(x))
 
         def save_func(path, imgs):
             try: os.mkdir(path)
             except FileExistsError:
                 for old_img in glob.glob(path+'/**.jpg'): os.remove(old_img)
-            for i, x in tqdm(enumerate(imgs), desc = 'Saving: ' + path.split('/')[-1]):
-                imageio.imwrite(path+'/%i.jpg'%i, x)
+            for i, x in tqdm(enumerate(imgs), desc = 'Saving: ' + path.split('/')[-1]): imageio.imwrite(path+'/%i.jpg'%i, x)
 
-        save_func(output_path + '/families',          Vis.ShowFamilies('likelihood'))
-        save_func(output_path + '/tracedIDs',         Vis.ShowHistory(memory, smallest_trajectories, 'ID'))
-        save_func(output_path + '/traced_velocities', Vis.ShowHistory(memory, smallest_trajectories, 'velocities'))
-        save_func(output_path + '/trajectories',      Vis.ShowTrajectories())
+        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph.gml', stringizer = lambda x: str(x))
+        interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
+        Vis = Visualizer(self.images, interpretation)
 
         map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
-
+        save_func(output_path + '/trajectories',      Vis.ShowTrajectories())
         for i, track in enumerate(interpretation.trajectories):
             with open(output_path + '/trajectories/data_%i.csv'%i, 'w'): pass
             np.savetxt(output_path + '/trajectories/data_%i.csv'%i, track.data, delimiter=",")
@@ -151,13 +144,20 @@ class Tracer():
             events_str = ''
             for event in interpretation.events: events_str += str(event) + '\n'
             file.write(events_str)
+
+
+
+        save_func(output_path + '/families',          Vis.ShowFamilies('likelihood'))
+        save_func(output_path + '/tracedIDs',         Vis.ShowHistory(memory, smallest_trajectories, 'ID'))
+        save_func(output_path + '/traced_velocities', Vis.ShowHistory(memory, smallest_trajectories, 'velocity'))
+
         del Vis, self.images
 
 def unzip_images(path):
     imgFromZip  = lambda name: np.repeat((np.asarray(Image.open(io.BytesIO(zp.read(name))), np.uint16))[:,:,np.newaxis],3,2)
     scaler      = lambda x: x * (2**-8 * int(np.max(x) >= 256) + int(np.max(x) < 256) + 254 * int(np.max(x) == 1))
     mapper      = lambda x: scaler(imgFromZip(x)).astype(np.uint8)
-    with zipfile.ZipFile('%s\\Compressed Data\\Shapes.zip'%path) as zp:
+    with zipfile.ZipFile(path) as zp:
         names = zp.namelist()
         try:    names.remove(*[x for x in names if len(x.split('/')[-1]) == 0 or x.split(',')[-1] == 'ini'])
         except: pass
@@ -171,7 +171,7 @@ class Fib:
 
     def __iter__(self):
         self.a = 1
-        self.b = 2
+        self.b = 1
         return self
 
     def __next__(self):
