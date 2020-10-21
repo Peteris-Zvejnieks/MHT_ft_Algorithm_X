@@ -73,8 +73,8 @@ class Tracer():
 
     def _get_trajectory(self, node0):
         nodes = [node0]
-        functions = [lambda x: list(x[0] for x in self.graph.in_edges(x) if type(x[0]) is not str),
-                     lambda x: list(x[1] for x in self.graph.out_edges(x) if type(x[1]) is not str)]
+        functions = [lambda x: list(y for y in self.graph._pred[x].keys() if type(y) is not str),
+                     lambda x: list(y for y in self.graph._succ[x].keys() if type(y) is not str)]
         direction = int(len(functions[0](node0)) > 0) - int(len(functions[1](node0)) > 0)
 
         if direction:
