@@ -145,8 +145,6 @@ class Tracer():
             for event in interpretation.events: events_str += str(event) + '\n'
             file.write(events_str)
 
-
-
         save_func(output_path + '/families',          Vis.ShowFamilies('likelihood'))
         save_func(output_path + '/tracedIDs',         Vis.ShowHistory(memory, smallest_trajectories, 'ID'))
         save_func(output_path + '/traced_velocities', Vis.ShowHistory(memory, smallest_trajectories, 'velocity'))
