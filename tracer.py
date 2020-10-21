@@ -63,15 +63,6 @@ class Tracer():
                         likelihood > self.decision_boundary]):
                     self.graph.add_edges_from(edges)
 
-    # def _get_groups(self, start, stop):
-    #     nodes1, nodes2 = [], []
-    #     for node in self.graph.nodes():
-    #         if node in self.special_nodes: continue
-    #         if list(self.graph.out_edges(node)) == [] and start <= self.data[node][0] <  stop: nodes1.append(node)
-    #         if list(self.graph.in_edges(node))  == [] and start <  self.data[node][0] <= stop: nodes2.append(node)
-
-    #     return(list(map(self._get_trajectory, nodes1)), list(map(self._get_trajectory, nodes2)))
-
     def _get_groups(self, start, stop):
         nodes1, nodes2 = [], []
         for node in self.graph.nodes():
@@ -82,8 +73,8 @@ class Tracer():
 
     def _get_trajectory(self, node0):
         nodes = [node0]
-        functions = [lambda x: list(x[0] for x in self.graph.in_edges(x) if type(x[0]) is not str),
-                     lambda x: list(x[1] for x in self.graph.out_edges(x) if type(x[1]) is not str)]
+        functions = [lambda x: list(y for y in self.graph._pred[x].keys() if type(y) is not str),
+                     lambda x: list(y for y in self.graph._succ[x].keys() if type(y) is not str)]
         direction = int(len(functions[0](node0)) > 0) - int(len(functions[1](node0)) > 0)
 
         if direction:
