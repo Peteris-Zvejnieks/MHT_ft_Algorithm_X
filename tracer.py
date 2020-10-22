@@ -26,16 +26,19 @@ class Tracer():
         self.node_trajectory    = node_trajectory
 
         self.time_range = np.array([np.min(self.dataset[:,0]), np.max(self.dataset[:,0])], dtype = int)
-        self._initialize_graph()
 
+        self._initialize_graph()
+        self._window_sweep(max_occlusion, quantile)
+
+    def _window_sweep(self, max_occlusion, quantile):
         iterr = iter(Fib(max_occlusion))
         for i, window_width in enumerate(iterr):
             self._eradicate_unlikely_connections(quantile)
-            self._main_loop(window_width)
+            self._time_sweep(window_width)
             interpretation = Graph_interpreter(self.graph.copy(), self.special_nodes, self.node_trajectory)
             print('Trajectory count :' + str(len(interpretation.trajectories)))
 
-    def _main_loop(self, window_width):
+    def _time_sweep(self, window_width):
         for time in tqdm(range(self.time_range[0], self.time_range[1]), desc = 'Window width - %i'%window_width):
             group1, group2 = self._get_groups(time, time + window_width)
             if len(group1) == len(group2) == 0: continue

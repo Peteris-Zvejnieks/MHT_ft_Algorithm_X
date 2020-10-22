@@ -37,16 +37,10 @@ A                   = 0.04
 
 Boundary            = 15
 width              = 480
-New     = new_or_gone_likelihood_func(A, Boundary, 1)
-Gone    = new_or_gone_likelihood_func(-A, width - Boundary, 0)
+New     = new_or_gone_likelihood_func_X(A, Boundary, 1)
+Gone    = new_or_gone_likelihood_func_X(-A, width - Boundary, 0)
 
-#   = 30
-#K2                  = 0.7
-
-#Merge   = multi_bubble_likelihood_func(Sig_displacement2, K2, 0)
-#Split   = multi_bubble_likelihood_func(Sig_displacement2, K2, 1)
-
-Stat_funcs  = [Move, New, Gone]#, Merge, Split]
+Stat_funcs  = [Move, New, Gone]
 Optimizer   = optimizer(Stat_funcs)
 #%%
 Max_displ_per_frame = 30
@@ -57,12 +51,14 @@ Asc_condition  = asc_condition_particles(Max_displ_per_frame, Radius_multlplyer,
 Upsilon = 3
 Mu_v = 10
 Max_acc = 5
-
 Comb_constr = comb_constr(Upsilon, Mu_v, Max_acc)
 
 ASSociator = Associator(Asc_condition, Comb_constr, max_k = 1)
-
-Trajectory_stats = trajectory_stats_v1(10, 6, 0.5)
+#%%
+mu_V       = 10 #@param {type:"slider", min:0, max:100}
+sig_V      = 6 #@param {type:"slider", min:0, max:100}
+r_sig_S    = 0.5 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
+Trajectory_stats = node_trajectory_with_stats(mu_V, sig_V, r_sig_S)
 #%%
 Max_occlusion = 3
 Quantile = 0.5
@@ -71,6 +67,3 @@ tracer = Tracer(ASSociator, Optimizer, Trajectory_stats,
 Indx = 29
 Prepend = 'test_new_constr _%i_'%Indx
 tracer.dump_data('/'+Prepend+str(Max_occlusion), 15, 5)
-# import networkx as nx
-# graph = tracer.graph
-# subgraphs =
