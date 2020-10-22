@@ -68,6 +68,6 @@ Max_occlusion = 3
 Quantile = 0.05
 tracer = Tracer(ASSociator, Optimizer, node_trajectory, Max_occlusion, Quantile, Sub_dir)
 #%%
-Indx = 7
-Prepend = 'test_%i_'%Indx
-tracer.dump_data('/'+Prepend+str(Max_occlusion), 15, 1)
+# Indx = 7
+# Prepend = 'test_%i_'%Indx
+# tracer.dump_data('/'+Prepend+str(Max_occlusion), 15, 1)
