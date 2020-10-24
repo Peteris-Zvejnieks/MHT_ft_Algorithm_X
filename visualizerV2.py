@@ -36,8 +36,6 @@ class Graph_interpreter():
         self.special_nodes = special_nodes
         self.node_trajectory = node_trajectory
         self._trajectories()
-        self._events()
-        self._families()
 
     def _find_by_node(self, node):
         for i, x in enumerate(self.trajectories):
@@ -54,7 +52,7 @@ class Graph_interpreter():
         self.paths.sort(key = lambda x: -len(x.nodes))
         self.trajectories = list(map(self.node_trajectory, self.paths))
 
-    def _events(self):
+    def events(self):
         self.events = []
         tmp_graph = self.graph.copy()
         likelihoods = nx.get_edge_attributes(self.graph, 'likelihood')
@@ -65,7 +63,7 @@ class Graph_interpreter():
             if len(ins  := list(tmp_graph.in_edges( node))) > 1: self.events.append([list(map(lambda edge: self._find_by_node(edge[0]), ins)), [self._find_by_node(node)],  likelihoods[ ins[0]]])
             if len(outs := list(tmp_graph.out_edges(node))) > 1: self.events.append([[self._find_by_node(node)], list(map(lambda edge: self._find_by_node(edge[1]), outs)), likelihoods[outs[1]]])
 
-    def _families(self):
+    def families(self):
         tmp_graph = self.graph.copy().to_undirected()
         tmp_graph.remove_nodes_from(self.special_nodes)
         self.families = list(self.graph.subgraph(c.union(set(self.special_nodes))) for c in nx.connected_components(tmp_graph))

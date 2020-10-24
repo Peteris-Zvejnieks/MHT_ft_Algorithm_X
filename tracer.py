@@ -131,6 +131,8 @@ class Tracer():
 
         nx.readwrite.gml.write_gml(self.graph, output_path + '/graph.gml', stringizer = lambda x: str(x))
         interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
+        interpretation.events()
+        interpretation.families()
         Vis = Visualizer(self.images, interpretation)
 
         map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
