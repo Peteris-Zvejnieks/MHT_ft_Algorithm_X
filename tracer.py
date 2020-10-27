@@ -70,8 +70,9 @@ class Tracer():
         nodes1, nodes2 = [], []
         for node in self.graph.nodes():
             if node in self.special_nodes: continue
-            if list(self.graph._succ[node]) == [] and start <= self.data[node][0] <  stop: nodes1.append(node)
-            if list(self.graph._pred[node]) == [] and start <  self.data[node][0] <= stop: nodes2.append(node)
+            if (time := self.data[node][0]) < start or time > stop: continue
+            if list(self.graph._succ[node]) == [] and start <= time <  stop: nodes1.append(node)
+            if list(self.graph._pred[node]) == [] and start <  time <= stop: nodes2.append(node)
         return(list(map(self._get_trajectory, nodes1)), list(map(self._get_trajectory, nodes2)))
 
     def _get_trajectory(self, node0):
