@@ -12,6 +12,7 @@ import io
 
 class Tracer():
     def __init__(self,
+                 dataset,
                  associator,
                  optimizer,
                  node_trajectory,
@@ -19,26 +20,29 @@ class Tracer():
                  quantile,
                  path):
 
-        self.dataset            = np.array(pd.read_excel('%s\\dataset.xlsx'%path))
+        self.dataset            = dataset
         self.path               = path
         self.optimizer          = optimizer
         self.associator         = associator
         self.node_trajectory    = node_trajectory
 
-        self.time_range = np.array([np.min(self.dataset[:,0]), np.max(self.dataset[:,0])], dtype = int)
+        self.redefine_nodes(self.dataset)
 
         self._initialize_graph()
-        self._window_sweep(max_occlusion, quantile)
 
-    def _window_sweep(self, max_occlusion, quantile):
+    def redefine_nodes(self, dataset):
+        self.time_range = np.array([np.min(dataset[:,0]), np.max(dataset[:,0])], dtype = int)
+
+
+    def window_sweep(self, max_occlusion, quantile):
         iterr = iter(Fib(max_occlusion))
         for i, window_width in enumerate(iterr):
-            self._eradicate_unlikely_connections(quantile)
-            self._time_sweep(window_width)
+            self.eradicate_unlikely_connections(quantile)
+            self.time_sweep(window_width)
             interpretation = Graph_interpreter(self.graph.copy(), self.special_nodes, self.node_trajectory)
             print('Trajectory count :' + str(len(interpretation.trajectories)))
 
-    def _time_sweep(self, window_width):
+    def time_sweep(self, window_width):
         for time in tqdm(range(self.time_range[0], self.time_range[1]), desc = 'Window width - %i'%window_width):
             group1, group2 = self._get_groups(time, time + window_width)
             if len(group1) == len(group2) == 0: continue
@@ -70,8 +74,9 @@ class Tracer():
         nodes1, nodes2 = [], []
         for node in self.graph.nodes():
             if node in self.special_nodes: continue
-            if list(self.graph._succ[node]) == [] and start <= self.data[node][0] <  stop: nodes1.append(node)
-            if list(self.graph._pred[node]) == [] and start <  self.data[node][0] <= stop: nodes2.append(node)
+            if (time := self.data[node][0]) < start or time > stop: continue
+            if list(self.graph._succ[node]) == [] and start <= time <  stop: nodes1.append(node)
+            if list(self.graph._pred[node]) == [] and start <  time <= stop: nodes2.append(node)
         return(list(map(self._get_trajectory, nodes1)), list(map(self._get_trajectory, nodes2)))
 
     def _get_trajectory(self, node0):
@@ -92,7 +97,7 @@ class Tracer():
         nodes.sort(key = lambda x: x[0])
         return self.node_trajectory(self.graph.subgraph(set(nodes)))
 
-    def _eradicate_unlikely_connections(self, quantile):
+    def eradicate_unlikely_connections(self, quantile):
         likelihoods             = nx.get_edge_attributes(self.graph, 'likelihood')
         self.decision_boundary  = np.quantile(np.array(list(likelihoods.values())), quantile)
         removables              = [edge for edge in self.graph.edges if likelihoods[edge] <= self.decision_boundary]
