@@ -157,15 +157,20 @@ class Tracer():
         del Vis, self.images
 
 def unzip_images(path):
-    imgFromZip  = lambda name: np.repeat((np.asarray(Image.open(io.BytesIO(zp.read(name))), np.uint16))[:,:,np.newaxis],3,2)
-    scaler      = lambda x: x * (2**-8 * int(np.max(x) >= 256) + int(np.max(x) < 256) + 254 * int(np.max(x) == 1))
-    mapper      = lambda x: scaler(imgFromZip(x)).astype(np.uint8)
+    imgFromZip  = lambda name: Image.open(io.BytesIO(zp.read(name)))
     with zipfile.ZipFile(path) as zp:
         names = zp.namelist()
         try:    names.remove(*[x for x in names if len(x.split('/')[-1]) == 0 or x.split(',')[-1] == 'ini'])
         except: pass
         names.sort(key = lambda x: int(x.split('/')[-1].split('_')[-1].split('.')[0]))
-        images = list(map(mapper, tqdm(names, desc = 'Loading images ')))
+        images = list(map(imgFromZip, tqdm(names, desc = 'Loading images ')))
+
+    scaler_f = lambda x: (2**-8 * int(np.max(x) >= 256) + int(np.max(x) < 256) + 254 * int(np.max(x) == 1))
+    scaler   = scaler_f(np.asarray(images[0], np.uint16))
+
+    mapper = lambda img:  np.repeat((np.asarray(img, np.uint16) * scaler).astype(np.uint8)[:,:,np.newaxis],3,2)
+    images = list(map(mapper, tqdm(images, desc = 'Mapping images ')))
+
     return images
 
 class Fib:
