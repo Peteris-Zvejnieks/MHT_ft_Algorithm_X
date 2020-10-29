@@ -12,27 +12,26 @@ import io
 
 class Tracer():
     def __init__(self,
-                 dataset,
-                 associator,
-                 optimizer,
-                 node_trajectory,
-                 max_occlusion,
-                 quantile,
+                 associator, optimizer, node_trajectory,
+                 max_occlusion, quantile,
                  path):
 
-        self.dataset            = dataset
         self.path               = path
         self.optimizer          = optimizer
         self.associator         = associator
         self.node_trajectory    = node_trajectory
 
-        self.redefine_nodes(self.dataset)
+        self.graph         = nx.DiGraph()
+        self.special_nodes = ['Entry', 'Exit']
+        self.graph.add_nodes_from(self.special_nodes, data = 'mommy calls me speshal')
 
-        self._initialize_graph()
-
-    def redefine_nodes(self, dataset):
+    def define_nodes(self, dataset):
+        self.dataset = dataset
         self.time_range = np.array([np.min(dataset[:,0]), np.max(dataset[:,0])], dtype = int)
+        nodes = [(x[0], x[1]) for x in datasetr]
 
+    def _recalculate_edges(self):
+        pass
 
     def window_sweep(self, max_occlusion, quantile):
         iterr = iter(Fib(max_occlusion))
@@ -74,7 +73,8 @@ class Tracer():
         nodes1, nodes2 = [], []
         for node in self.graph.nodes():
             if node in self.special_nodes: continue
-            if (time := self.data[node][0]) < start or time > stop: continue
+            time = self.data[node][0]
+            if time < start or time > stop: continue
             if list(self.graph._succ[node]) == [] and start <= time <  stop: nodes1.append(node)
             if list(self.graph._pred[node]) == [] and start <  time <= stop: nodes2.append(node)
         return(list(map(self._get_trajectory, nodes1)), list(map(self._get_trajectory, nodes2)))
@@ -104,9 +104,7 @@ class Tracer():
         self.graph.remove_edges_from(removables)
 
     def _initialize_graph(self):
-        self.graph         = nx.DiGraph()
-        self.special_nodes = ['Entry', 'Exit']
-        self.graph.add_nodes_from(self.special_nodes, data = 'mommy calls me speshal')
+
 
         for adress, point in zip(np.array(self.dataset)[:,:2], np.array(self.dataset)):
             node = tuple(map(int, adress))
