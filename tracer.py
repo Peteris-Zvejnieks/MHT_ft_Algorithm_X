@@ -52,13 +52,13 @@ class Tracer():
                 edges = []
                 for parent in parents:
                     try: parent = group1[parent].nodes[-1]
-                    except: p1, t1 = [0,0], -1e48
-                    else: p1, t1 = self.data[parent][2:4], self.data[parent][0]
+                    except: p1, t1 = np.zeros(2), -1e48
+                    else: p1, t1 = np.array(self.data[parent][2:4]), self.data[parent][0]
                     for child in children:
                         try: child = group2[child].nodes[0]
-                        except: p2, t2 = [0,0], 1e48
-                        else: p2, t2 = self.data[child][2:4], self.data[child][0]
-                        v = (((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)**0.5)/(t2-t1)
+                        except: p2, t2 = np.zeros(2), 1e48
+                        else: p2, t2 = np.array(self.data[child][2:4]), self.data[child][0]
+                        v = np.dot(p1, p2) / (t2-t1)
                         edges.append((parent, child, {'likelihood': likelihood, 'velocity' : v}))
 
                 if any([any([self.data[x[0]][0] == time     for x in edges]),
