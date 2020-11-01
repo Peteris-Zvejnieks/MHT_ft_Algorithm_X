@@ -26,9 +26,21 @@ class Tracer():
         self.graph.add_nodes_from(self.special_nodes, data = 'mommy calls me speshal')
 
     def define_nodes(self, dataset):
-        self.dataset = dataset
+        self.dataset    = dataset
+        old_time_range  = self.time_range
         self.time_range = np.array([np.min(dataset[:,0]), np.max(dataset[:,0])], dtype = int)
-        nodes = [(x[0], x[1]) for x in datasetr]
+        old_nodes       = list(self.graph._node.keys())
+
+        for adress, data_point in zip(np.array(self.dataset)[:,:2], np.array(self.dataset)):
+            node = tuple(map(int, adress))
+            try: old_nodes.remove(node)
+            except ValueError: pass
+            self.graph.add_node(node, data = list(point))
+
+            for i, special_node in enumerate(self.special_nodes):
+                edge = [special_node, node]
+                if i: edge.reverse()
+                self.graph.add_edge(*tuple(edge), likelihood = float(point[0] == self.time_range[i]), velocity = 1e-12)
 
     def _recalculate_edges(self):
         pass
