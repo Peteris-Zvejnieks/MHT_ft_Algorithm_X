@@ -65,13 +65,13 @@ class comb_constr(Combination_constraint):
                 dt = start.beginning[0] - stop.ending[0]
                 mid_v = (start.beginning[2:4] - stop.ending[2:4])/dt
                 if len(stop)  >= 2:
-                    v = stop.changes[-1,1:3]/stop.changes[-1,0]
+                    v = stop.displacements[-1,:]/stop.changes[-1,0]
                     acc = 2 * (mid_v - v)/(stop.changes[-1,0] + dt)
                     if np.linalg.norm(acc) > max_a: return False
                     if d_fi(v, mid_v) > (np.pi + 1e-6) * np.exp(-np.linalg.norm(v)/v_scaler): return False
                 if len(start) >= 2:
-                    v = start.changes[-1,1:3]/start.changes[-1,0]
-                    acc = 2 * (v - mid_v)/(start.changes[-1,0] + dt)
+                    v = start.displacements[0,:]/start.changes[0,0]
+                    acc = 2 * (v - mid_v)/(start.changes[0,0] + dt)
                     if np.linalg.norm(acc) > max_a: return False
                     if d_fi(mid_v, v) > (np.pi + 1e-3) * np.exp(-np.linalg.norm(v)/v_scaler): return False
             #Area check
