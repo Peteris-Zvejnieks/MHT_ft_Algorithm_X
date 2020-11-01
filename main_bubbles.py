@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stat_funcs import movement_likelihood_func, new_or_gone_likelihood_func_Y, multi_bubble_likelihood_func
+from stat_funcs import movement_likelihood_func, new_or_gone_likelihood_func, multi_bubble_likelihood_func
 from associator import Associator, asc_condition, comb_constr
 from optimizer import optimizer
 from trajectories import node_trajectory_with_stats
@@ -37,8 +37,8 @@ Move   = movement_likelihood_func(Sig_displacement1, K1)
 A                   = 0.1 #@param {type:"slider", min:0.01, max:0.5, step:0.01}
 Boundary            = 20 #@param {type:"slider", min:0, max:50}
 Height              = 919 #@param {type:"slider", min:0, max:1500}
-New    = new_or_gone_likelihood_func_Y(A, Boundary, 1)
-Gone   = new_or_gone_likelihood_func_Y(-A, Height - Boundary, 0)
+New    = new_or_gone_likelihood_func(A, Boundary, 1)
+Gone   = new_or_gone_likelihood_func(-A, Height - Boundary, 0)
 
 Sig_displacement2   = 64 #@param {type:"slider", min:0, max:150}
 K2                  = 0.5 #@param {type:"slider", min:0, max:1, step:0.01}
@@ -68,6 +68,6 @@ Max_occlusion = 3
 Quantile = 0.05
 tracer = Tracer(ASSociator, Optimizer, node_trajectory, Max_occlusion, Quantile, Sub_dir)
 #%%
-Indx = 7
+Indx = 10
 Prepend = 'test_%i_'%Indx
 tracer.dump_data('/'+Prepend+str(Max_occlusion), 15, 1)

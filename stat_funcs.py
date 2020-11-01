@@ -39,16 +39,16 @@ class movement_likelihood_func(statFunc):
                 try: p2 = start(t2 - dt/2)
                 except:
                     p1 = stop(t2)
-                    p2 = start.beginning[2:4]
+                    p2 = start.positions[0,:]
                 finally: a = likelihood_displ(np.linalg.norm(p2 - p1), dt)
 
             except:
-                p1 = stop.ending[2:4]
+                p1 = stop.positions[-1,:]
                 try:
                     p2 = start(t1)
                     a = likelihood_displ(np.linalg.norm(p2 - p1), dt)
                 except:
-                    p2 = start.beginning[2:4]
+                    p2 = start.positions[0,:]
                     dr      = np.linalg.norm(p2 - p1)
                     mu_d    = (start.mu_V + stop.mu_V)/2 * dt
                     sigma_d = (start.sig_V + stop.sig_V)/2 * dt
@@ -57,60 +57,41 @@ class movement_likelihood_func(statFunc):
 
         super().__init__(f, [1,1])
 
-class new_or_gone_likelihood_func_Y(statFunc):
-    def __init__(self, a, b, c):
+class new_or_gone_likelihood_func(statFunc):
+    def __init__(self, a, b, c, axis = 1):
         f0 = lambda x: 1/(1+np.exp(a*(x-b)))
         def f(stop, start):
             if c:
                 trajectory, dt = start[0], -1
                 t = trajectory.beginning[0] + dt
-                try:    y = trajectory(t)[1]
-                except: y = trajectory.beginning[3] + trajectory.mu_V * dt
+                try:    y = trajectory(t)[axis]
+                except: y = trajectory.positions[0, axis] + trajectory.mu_V * dt
             else:
                 trajectory, dt = stop[0], 1
                 t = trajectory.ending[0] + dt
-                try:    y = trajectory(t)[1]
-                except: y = trajectory.ending[3]  + trajectory.mu_V * dt
+                try:    y = trajectory(t)[axis]
+                except: y = trajectory.positions[-1, axis]  + trajectory.mu_V * dt
             return f0(y)
 
         super().__init__(f, [1 - c, c])
 
-class new_or_gone_likelihood_func_X(statFunc):
-    def __init__(self, a, b, c):
-        f0 = lambda x: 1/(1+np.exp(a*(x-b)))
-        def f(stop, start):
-            if c:
-                trajectory, dt = start[0], -1
-                t = trajectory.beginning[0] + dt
-                try:    x = trajectory(t)[1]
-                except: x = trajectory.beginning[2] + trajectory.mu_V * dt
-            else:
-                trajectory, dt = stop[0], 1
-                t = trajectory.ending[0] + dt
-                try:    x = trajectory(t)[1]
-                except: x = trajectory.ending[2]  + trajectory.mu_V * dt
-            return f0(x)
-
-        super().__init__(f, [1 - c, c])
-
-
 class multi_bubble_likelihood_func(statFunc):
-    def __init__(self, sig_displ, k, c):
+    def __init__(self, sig_displ, k, c, power = 3/2):
         likelihood_displ = lambda p1, p2, dt: np.divide(norm.pdf(np.linalg.norm(p2 - p1), 0, sig_displ*dt),norm.pdf(0, 0, sig_displ*dt))
         likelihood_S     = lambda dS, S_sig: norm.pdf(dS, 0, S_sig)/norm.pdf(0, 0, S_sig)
-        f0 = lambda pos, Ss: np.array([np.dot(pos[:,0], Ss**2)/np.sum(Ss**2),
-                                       np.dot(pos[:,1], Ss**2)/np.sum(Ss**2)])
+        f0 = lambda pos, Ss: np.array([np.dot(pos[:,i], Ss**power)/np.sum(sS**power) for i in range(pos.shape[1])])
+
         c = int(c)
         def f(stops, starts):
             if c: #split
                 trajectory   = stops[0]
                 trajectories = starts
-                t, p = trajectory.ending[0], trajectory.ending[2:4]
+                t, p = trajectory.ending[0], trajectory.positions[-1,:]
                 ts = [traject.beginning[0] for traject in trajectories]
             else: #merge
                 trajectories = stops
                 trajectory   = starts[0]
-                t, p = trajectory.beginning[0], trajectory.beginning[2:4]
+                t, p = trajectory.beginning[0], trajectory.positions[0,:]
                 ts = [traject.ending[0] for traject in trajectories]
 
             positions = []
