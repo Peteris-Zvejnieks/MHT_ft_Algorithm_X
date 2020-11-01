@@ -21,7 +21,11 @@ class node_trajectory_base():
 
     def _get_data(self):
         data = nx.get_node_attributes(self.backbone, 'data')
-        self.data = np.array(list(map(lambda node: data[node], self.nodes)))
+        positions = nx.get_node_attributes(self.backbone, 'position')
+        params = nx.get_node_attributes(self.backbone, 'params')
+        self.data       = np.array(list(map(lambda node: data[node], self.nodes)))
+        self.positions  = np.array(list(map(lambda node: positions[node], self.nodes)))
+        self.params    = np.array(list(map(lambda node: params[node], self.nodes)))
         self.beginning, self.ending = self.data[0], self.data[-1]
         self.time = self.data[:,0]
 
@@ -37,7 +41,7 @@ class node_trajectory_base():
         else:
             if self.data.shape[0] <= 3: k = 1
             else:                       k = 3
-            points = [self.data[:,2], self.data[:,3]]
+            points = [self.positions[:,i] for i in range(self.positions.shape[1])]
             self.tck, self.u = interp.splprep(points, u = self.time, k = k, s = 8e2)
 
 class node_trajectory(node_trajectory_base):
@@ -55,21 +59,23 @@ class node_trajectory(node_trajectory_base):
     def _get_changes(self):
         self.changes = np.zeros((max(len(self) - 1, 1), self.data.shape[1]))
         self.changes[0,0] = 1
+        self.displacements = self.positions[1:,:] - self.positions[:-1,:]
         if len(self) > 1:
-            self.changes[:,   0] = self.data[1:,0 ] - self.data[:-1,0 ]
-            self.changes[:,1:-1] = self.data[1:,2:] - self.data[:-1,2:]
-            self.changes[:,  -1] = self.likelihoods.ravel()
+            self.changes[:, 0]  = self.data[1:,0 ] - self.data[:-1,0 ]
+            self.changes[:, 1:1 + self.positions.shape[1]]  = self.displacements
+            self.changes[:, 1 + self.positions.shape[1]:-1] = self.params[1:,:] - self.params[:-1,:]
+            self.changes[:, -1] = self.likelihoods.ravel()
 
     def _get_acceleration(self):
         self.acceleration = np.zeros((max(len(self) - 2, 1), 2))
         if len(self) > 2:
-            displ = self.changes[:,1:3]
-            norms = np.linalg.norm(displ, axis = 1)
-            self.acceleration[:,0] = np.arccos((displ[1:,0]*displ[:-1,0] + displ[1:,1]*displ[:-1,1])/(norms[1:] * norms[:-1]))/self.changes[1:,0]
+            norms = np.linalg.norm(self.displacements, axis = 1)
+            dot_products = np.array(list(map(lambda x: np.dot(x[0], x[1]), zip(self.displacements[1:,:], self.displacements[:-1,:]))))
+            self.acceleration[:,0] = np.arccos(dot_products/(norms[1:] * norms[:-1]))/self.changes[1:,0]
             self.acceleration[:,1] = (norms[1:] - norms[:-1])/self.changes[1:,0]
 
     def _get_stats(self):
-        velocities   = np.linalg.norm(self.changes[:,1:3], axis = 1)/self.changes[:,0]
+        velocities   = np.linalg.norm(self.displacements, axis = 1)/self.changes[:,0]
         self.mu_V    = np.average(velocities)
         self.sig_V   = np.std(velocities)
         self.mu_S    = np.average((S := self.data[:,5]))
