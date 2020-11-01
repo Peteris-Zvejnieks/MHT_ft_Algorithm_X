@@ -130,7 +130,8 @@ class Tracer():
         interpretation.events()
         interpretation.families()
 
-        map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
+        try: os.mkdir(output_path + '/trajectories')
+        except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
 
         for i, track in enumerate(interpretation.trajectories):
             with open(output_path + '/trajectories/data_%i.csv'%i, 'w'): pass

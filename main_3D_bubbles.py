@@ -19,7 +19,7 @@ W_dir = Drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 os.chdir(W_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 1
+I = 0
 
 J = 0
 
