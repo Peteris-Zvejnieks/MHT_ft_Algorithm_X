@@ -78,7 +78,7 @@ class node_trajectory(node_trajectory_base):
         velocities   = np.linalg.norm(self.displacements, axis = 1)/self.changes[:,0]
         self.mu_V    = np.average(velocities)
         self.sig_V   = np.std(velocities)
-        self.mu_S    = np.average((S := self.data[:,5]))
+        self.mu_S    = np.average((S := self.params[:,0]))
         self.sig_S   = np.std(S)
 
 class node_trajectory_with_stats():
@@ -90,7 +90,7 @@ class node_trajectory_with_stats():
         if len(trajectory) <= 2:
             trajectory.mu_V    = self.mu_V0
             trajectory.sig_V   = self.sig_V0
-            trajectory.mu_S    = np.average(trajectory.data[:,5])
+            trajectory.mu_S    = np.average(trajectory.params[:,0])
             trajectory.sig_S   = trajectory.mu_S * self.r_sig_S0
         else: trajectory._get_stats()
         return trajectory

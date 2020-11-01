@@ -53,7 +53,15 @@ class asc_condition_3D_bubbles(Association_condition):
             if stop == start: return False
             dt = start.beginning[0] - stop.ending[0]
             dr = np.linalg.norm(start.beginning[2:4] - stop.ending[2:4])
-            R1, R2 =
+            R1, R2 = (3*np.pi*stop.mu_S/4)**(1/3), (3*np.pi*start.mu_S/4)**(1/3)
+
+            if dt <= 0: return False
+            if dr > max_displ_per_frame * dt:                                               return False
+            if dr > (R1+R2)/2 * radius_multiplyer * dt:                                     return False
+            if dr < min_displacement * dt:                                                  return True
+            else:                                                                           return True
+
+        super().__init__(f)
 
 class Combination_constraint():
     def __init__(self, f):
@@ -73,13 +81,13 @@ class comb_constr(Combination_constraint):
                 dt = start.beginning[0] - stop.ending[0]
                 mid_v = (start.beginning[2:4] - stop.ending[2:4])/dt
                 if len(stop)  >= 2:
-                    v = stop.changes[-1,1:3]/stop.changes[-1,0]
+                    v = stop.displacements[-1,:]/stop.changes[-1,0]
                     acc = 2 * (mid_v - v)/(stop.changes[-1,0] + dt)
                     if np.linalg.norm(acc) > max_a: return False
                     if d_fi(v, mid_v) > (np.pi + 1e-6) * np.exp(-np.linalg.norm(v)/v_scaler): return False
                 if len(start) >= 2:
-                    v = start.changes[-1,1:3]/start.changes[-1,0]
-                    acc = 2 * (v - mid_v)/(start.changes[-1,0] + dt)
+                    v = start.displacements[0,:]/start.changes[0,0]
+                    acc = 2 * (v - mid_v)/(start.changes[0,0] + dt)
                     if np.linalg.norm(acc) > max_a: return False
                     if d_fi(mid_v, v) > (np.pi + 1e-3) * np.exp(-np.linalg.norm(v)/v_scaler): return False
             #Area check
