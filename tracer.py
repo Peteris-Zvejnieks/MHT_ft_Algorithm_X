@@ -17,13 +17,15 @@ class Tracer():
                  node_trajectory,
                  max_occlusion,
                  quantile,
-                 path):
+                 path,
+                 dim = 2):
 
         self.dataset            = np.array(pd.read_excel('%s\\dataset.xlsx'%path))
         self.path               = path
         self.optimizer          = optimizer
         self.associator         = associator
         self.node_trajectory    = node_trajectory
+        self.dim                = dim
 
         self.time_range = np.array([np.min(self.dataset[:,0]), np.max(self.dataset[:,0])], dtype = int)
 
@@ -102,18 +104,20 @@ class Tracer():
     def _initialize_graph(self):
         self.graph         = nx.DiGraph()
         self.special_nodes = ['Entry', 'Exit']
-        self.graph.add_nodes_from(self.special_nodes, data = 'mommy calls me speshal')
+        self.graph.add_nodes_from(self.special_nodes, data = 'mommy calls me speshal', position = 'special education class', params = 'speshal')
 
         for adress, point in zip(np.array(self.dataset)[:,:2], np.array(self.dataset)):
             node = tuple(map(int, adress))
-            self.graph.add_node(node, data = list(point))
+            self.graph.add_node(node, data = list(point), position = point[2:2+self.dim], params = point[2 + self.dim:])
 
             for i, special_node in enumerate(self.special_nodes):
                 edge = [special_node, node]
                 if i: edge.reverse()
                 self.graph.add_edge(*tuple(edge), likelihood = float(point[0] == self.time_range[i]), velocity = 1e-12)
 
-        self.data = nx.get_node_attributes(self.graph, 'data')
+        self.data       = nx.get_node_attributes(self.graph, 'data')
+        self.position   = nx.get_node_attributes(self.graph, 'position')
+        self.params     = nx.get_node_attributes(self.graph, 'params')
 
     def dump_data(self, sub_folder = None, memory = 15, smallest_trajectories = 1):
         self.images = unzip_images('%s\\Compressed Data\\Shapes.zip'%self.path)
