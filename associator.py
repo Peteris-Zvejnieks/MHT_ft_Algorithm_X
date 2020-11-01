@@ -41,11 +41,19 @@ class asc_condition_particles(Association_condition):
 
             if   dt <= 0:                                                                   return False
             if dr > max_displ_per_frame * dt:                                               return False
-            if dr > ((stop.ending[5]+start.beginning[5])/2)**0.5 * radius_multiplyer * dt:    return False
+            if dr > ((stop.ending[5]+start.beginning[5])/2)**0.5 * radius_multiplyer * dt:  return False
             if dr < min_displacement * dt:                                                  return True
             else:                                                                           return True
 
         super().__init__(f)
+
+class asc_condition_3D_bubbles(Association_condition):
+    def __init__(self, max_displ_per_frame, radius_multiplyer, min_displacement):
+        def f(stop, start):
+            if stop == start: return False
+            dt = start.beginning[0] - stop.ending[0]
+            dr = np.linalg.norm(start.beginning[2:4] - stop.ending[2:4])
+            R1, R2 =
 
 class Combination_constraint():
     def __init__(self, f):
