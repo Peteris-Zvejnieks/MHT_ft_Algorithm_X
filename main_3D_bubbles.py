@@ -19,7 +19,7 @@ W_dir = Drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 os.chdir(W_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 0
+I = 1
 
 J = 0
 
@@ -61,13 +61,13 @@ ASSociator = Associator(Asc_condition, Comb_constr)
 #%%
 mu_V       = 0.0025 #@param {type:"slider", min:0, max:100}
 sig_V      = 0.001 #@param {type:"slider", min:0, max:100}
-r_sig_S    = 0.01 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
+r_sig_S    = 0.05 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
 node_trajectory = node_trajectory_with_stats(mu_V, sig_V, r_sig_S)
 #%%
 Max_occlusion = 1
 Quantile = 0.2
 tracer = Tracer(ASSociator, Optimizer, node_trajectory, Max_occlusion, Quantile, Sub_dir,3)
 #%%
-Indx = 2
+Indx = 1
 Prepend = 'test_%i_'%Indx
 tracer.dump_data('/'+Prepend+str(Max_occlusion), 15, 1)
