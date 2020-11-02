@@ -10,7 +10,7 @@ from tracer import Tracer
 import glob
 import os
 
-plt.rcParams['figure.dpi'] = 500
+plt.rcParams['figure.dpi'] = 300
 np.set_printoptions(suppress=True)
 #%%
 Drive = 'C:\\'
@@ -30,17 +30,17 @@ except: pass
 Sub_dir  = sub_dirs[J]
 print(Sub_dir)
 #%%
-Sig_displacement1   = 0.002  #@param {type: "slider", min: 10, max: 100}
-K1                  = 0.3 #@param {type:"slider", min:0, max:1, step:0.01}
+Sig_displacement1   = 0.01  #@param {type: "slider", min: 10, max: 100}
+K1                  = 0.2 #@param {type:"slider", min:0, max:1, step:0.01}
 Move   = movement_likelihood_func(Sig_displacement1, K1)
 
-A                   = 0.1 #@param {type:"slider", min:0.01, max:0.5, step:0.01}
-Boundary            = 0.02 #@param {type:"slider", min:0, max:50}
-Height              = 0.132 #@param {type:"slider", min:0, max:1500}
-New    = new_or_gone_likelihood_func(A, Boundary, 1)
-Gone   = new_or_gone_likelihood_func(-A, Height - Boundary, 0)
+A                   = 50 #@param {type:"slider", min:0.01, max:0.5, step:0.01}
+Boundary            = 0.025 #@param {type:"slider", min:0, max:50}
+Height              = 0.15 #@param {type:"slider", min:0, max:1500}
+New    = new_or_gone_likelihood_func(A, Boundary, 1, 2)
+Gone   = new_or_gone_likelihood_func(-A, Height - Boundary, 0, 2)
 
-Sig_displacement2   = 0.006 #@param {type:"slider", min:0, max:150}
+Sig_displacement2   = 0.01 #@param {type:"slider", min:0, max:150}
 K2                  = 0.5 #@param {type:"slider", min:0, max:1, step:0.01}
 Merge  = multi_bubble_likelihood_func(Sig_displacement2, K2, 0, 1)
 Split  = multi_bubble_likelihood_func(Sig_displacement2, K2, 1, 1)
@@ -53,21 +53,21 @@ Min_displacement            = 0.001 #@param {type:"slider", min:0, max:100}
 Asc_condition  = asc_condition_3D_bubbles(Max_displacement_per_frame, Radius_multiplyer, Min_displacement)
 
 Upsilon                     = 1.5 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
-Mu_v                        = 0.01 #@param {type:"slider", min:0, max:300}
-Max_acc                     = 1 #@param {type:"slider", min:0, max:300}
+Mu_v                        = 1 #@param {type:"slider", min:0, max:300}
+Max_acc                     = 5 #@param {type:"slider", min:0, max:300}
 Comb_constr = comb_constr(Upsilon, Mu_v, Max_acc)
 
 ASSociator = Associator(Asc_condition, Comb_constr)
 #%%
 mu_V       = 0.0025 #@param {type:"slider", min:0, max:100}
 sig_V      = 0.001 #@param {type:"slider", min:0, max:100}
-r_sig_S    = 1.5 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
+r_sig_S    = 0.01 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
 node_trajectory = node_trajectory_with_stats(mu_V, sig_V, r_sig_S)
 #%%
 Max_occlusion = 1
-Quantile = 0.1
+Quantile = 0.2
 tracer = Tracer(ASSociator, Optimizer, node_trajectory, Max_occlusion, Quantile, Sub_dir,3)
 #%%
-Indx = 1
+Indx = 2
 Prepend = 'test_%i_'%Indx
 tracer.dump_data('/'+Prepend+str(Max_occlusion), 15, 1)

@@ -110,8 +110,7 @@ class multi_bubble_likelihood_func(statFunc):
 
                 frac    = len(Ss)/len(trajectories)
                 a       = likelihood_displ(p_predict, p, np.average(dts)) * frac
-            else:
-                a=0
+            else: a=0
 
             S       = np.sum(np.array([traject.mu_V for traject in trajectories]))
             sig_S   = np.sum(np.array([tr.sig_S for tr in trajectories]))

@@ -80,16 +80,17 @@ class comb_constr(Combination_constraint):
                 stop, start = stops[0], starts[0]
                 dt = start.beginning[0] - stop.ending[0]
                 mid_v = (start.positions[0,:] - stop.positions[-1,:])/dt
+                whooopsielon = 1e-3
                 if len(stop)  >= 2:
                     v = stop.displacements[-1,:]/stop.changes[-1,0]
                     acc = 2 * (mid_v - v)/(stop.changes[-1,0] + dt)
                     if np.linalg.norm(acc) > max_a: return False
-                    if d_fi(v, mid_v) > (np.pi + 1e-6) * np.exp(-np.linalg.norm(v)/v_scaler): return False
+                    if d_fi(v, mid_v) > (np.pi + whooopsielon) * np.exp(-np.linalg.norm(v)/v_scaler): return False
                 if len(start) >= 2:
                     v = start.displacements[0,:]/start.changes[0,0]
                     acc = 2 * (v - mid_v)/(start.changes[0,0] + dt)
                     if np.linalg.norm(acc) > max_a: return False
-                    if d_fi(mid_v, v) > (np.pi + 1e-3) * np.exp(-np.linalg.norm(v)/v_scaler): return False
+                    if d_fi(mid_v, v) > (np.pi + whooopsielon) * np.exp(-np.linalg.norm(v)/v_scaler): return False
             #Area check
             S1, S2, sigs = 0, 0, 0
             for stop in stops:

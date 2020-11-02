@@ -1,4 +1,6 @@
 from visualizerV2 import Visualizer, Graph_interpreter
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
 from PIL import Image
 from tqdm import tqdm
 import networkx as nx
@@ -131,9 +133,20 @@ class Tracer():
         interpretation.families()
 
         try: os.mkdir(output_path + '/trajectories')
-        except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
+        except FileExistsError:
+            map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
+            map(os.remove, glob.glob(output_path + '/trajectories/**.jpg'))
 
-        for i, track in enumerate(interpretation.trajectories):
+        for i, track in tqdm(enumerate(interpretation.trajectories), desc = 'Saving trajectories: '):
+
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            ax.plot(track.positions[:,0], track.positions[:,1], track.positions[:,2], label='parametric curve', marker='o', ms=1, mec = 'black')
+            ax.set(xlim = (0, 0.09), ylim = (0, 0.03), zlim=(0.015, 0.135))
+            plt.tight_layout()
+            plt.savefig(output_path + '/trajectories/trajectory_%i.jpg'%i)
+            plt.close()
+
             with open(output_path + '/trajectories/data_%i.csv'%i, 'w'): pass
             np.savetxt(output_path + '/trajectories/data_%i.csv'%i, track.data, delimiter=",")
 
