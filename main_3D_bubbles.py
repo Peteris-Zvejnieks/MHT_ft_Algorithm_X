@@ -66,7 +66,7 @@ node_trajectory = node_trajectory_with_stats(mu_V, sig_V, r_sig_S)
 #%%
 Max_occlusion = 1
 Quantile = 0.1
-tracer = Tracer(ASSociator, Optimizer, node_trajectory, Max_occlusion, Quantile, Sub_dir)
+tracer = Tracer(ASSociator, Optimizer, node_trajectory, Max_occlusion, Quantile, Sub_dir,3)
 #%%
 Indx = 1
 Prepend = 'test_%i_'%Indx
