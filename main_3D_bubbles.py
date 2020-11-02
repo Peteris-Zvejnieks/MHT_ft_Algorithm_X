@@ -63,14 +63,14 @@ aSSociator = aAssociator(assc_condition, cComb_constr)
 K_V       = 0.0025 #@param {type:"slider", min:0, max:100}
 Sig_V      = 0.001 #@param {type:"slider", min:0, max:100}
 R_sig_S    = 0.05 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
-node_trajectory = node_trajectory_with_stats(mu_V, sig_V, r_sig_S)
+node_trajectory = node_trajectory_with_stats(K_V, Sig_V, R_sig_S)
 #%%
 Max_occlusion = 1
-Quantile = 0.2
+Quantile = 0.1
 #%%
 tracer = tRacer(aSSociator, oOptimizer, node_trajectory, Max_occlusion, Quantile, sub_dir,3)
 #%%
-indx = 1
+indx = 2
 string = '/'+'test_%i_'%indx+str(Max_occlusion)
 tracer.dump_data(string, 15, 1)
 #%%

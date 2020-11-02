@@ -51,6 +51,7 @@ class Graph_interpreter():
         self.paths = list(self.graph.subgraph(c) for c in nx.connected_components(tmp_graph))
         self.paths.sort(key = lambda x: -len(x.nodes))
         self.trajectories = list(map(self.node_trajectory, self.paths))
+        self.trajectories.sort(key = lambda x: x.data[0,0])
 
     def events(self):
         self.events = []
