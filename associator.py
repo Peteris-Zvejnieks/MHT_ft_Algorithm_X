@@ -63,7 +63,7 @@ class comb_constr(Combination_constraint):
             if len(stops) == 1 and len(starts) == 1:
                 stop, start = stops[0], starts[0]
                 dt = start.beginning[0] - stop.ending[0]
-                mid_v = (start.beginning[2:4] - stop.ending[2:4])/dt
+                mid_v = (start.positions[0,:] - stop.positions[-1,:])/dt
                 if len(stop)  >= 2:
                     v = stop.displacements[-1,:]/stop.changes[-1,0]
                     acc = 2 * (mid_v - v)/(stop.changes[-1,0] + dt)
