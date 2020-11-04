@@ -54,7 +54,7 @@ Min_displacement            = 0.001 #@param {type:"slider", min:0, max:100}
 assc_condition  = asc_condition_3D_bubbles(Max_displacement_per_frame, Radius_multiplyer, Min_displacement)
 
 Upsilon                     = 1.5 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
-Mu_v                        = 1 #@param {type:"slider", min:0, max:300}
+Mu_v                        = 5 #@param {type:"slider", min:0, max:300}
 Max_acc                     = 5 #@param {type:"slider", min:0, max:300}
 cComb_constr = comb_constr(Upsilon, Mu_v, Max_acc)
 
@@ -66,11 +66,11 @@ R_sig_S    = 0.05 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
 node_trajectory = node_trajectory_with_stats(K_V, Sig_V, R_sig_S)
 #%%
 Max_occlusion = 1
-Quantile = 0.1
+Quantile = 0.05
 #%%
 tracer = tRacer(aSSociator, oOptimizer, node_trajectory, Max_occlusion, Quantile, sub_dir,3)
 #%%
-indx = 2
+indx = 6
 string = '/'+'test_%i_'%indx+str(Max_occlusion)
 tracer.dump_data(string, 15, 1)
 #%%
