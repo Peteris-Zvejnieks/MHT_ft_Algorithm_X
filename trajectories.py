@@ -54,7 +54,7 @@ class node_trajectory(node_trajectory_base):
         time = self.time[-int(t > self.time[0])]
         a = 0.5
         dt = t - time
-        return self.interpolate(time) + self.interpolate(t - a * dt/abs(dt), 1) * dt
+        return self.interpolate(time) + self.interpolate(time - a * dt/abs(dt), 1) * dt
 
     def _get_changes(self):
         self.changes = np.zeros((max(len(self) - 1, 1), self.data.shape[1]))
