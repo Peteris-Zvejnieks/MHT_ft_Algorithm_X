@@ -32,7 +32,7 @@ print(sub_dir)
 del(I, J)
 #%%
 Sig_displacement1   = 0.01  #@param {type: "slider", min: 10, max: 100}
-K1                  = 0.2 #@param {type:"slider", min:0, max:1, step:0.01}
+K1                  = 1 #@param {type:"slider", min:0, max:1, step:0.01}
 move   = movement_likelihood_func(Sig_displacement1, K1)
 
 A                   = 50 #@param {type:"slider", min:0.01, max:0.5, step:0.01}
@@ -48,29 +48,29 @@ split  = multi_bubble_likelihood_func(Sig_displacement2, K2, 1, 1)
 
 oOptimizer     = optimizer([move, new, gone, merge, split])
 #%%
-Max_displacement_per_frame  = 0.004  #@param {type: "slider", min: 10, max: 500}
+Max_displacement_per_frame  = 0.008  #@param {type: "slider", min: 10, max: 500}
 Radius_multiplyer           = 4 #@param {type:"slider", min:1, max:10}
 Min_displacement            = 0.001 #@param {type:"slider", min:0, max:100}
 assc_condition  = asc_condition_3D_bubbles(Max_displacement_per_frame, Radius_multiplyer, Min_displacement)
 
-Upsilon                     = 1.5 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
-Mu_v                        = 5 #@param {type:"slider", min:0, max:300}
+Upsilon                     = 4 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
+K_v                         = 10 #@param {type:"slider", min:0, max:300}
 Max_acc                     = 5 #@param {type:"slider", min:0, max:300}
-cComb_constr = comb_constr(Upsilon, Mu_v, Max_acc)
+cComb_constr = comb_constr(Upsilon, K_v, Max_acc)
 
-aSSociator = aAssociator(assc_condition, cComb_constr)
+aSSociator = aAssociator(assc_condition, cComb_constr, max_k=1)
 #%%
-K_V       = 0.0025 #@param {type:"slider", min:0, max:100}
-Sig_V      = 0.001 #@param {type:"slider", min:0, max:100}
-R_sig_S    = 0.05 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
-node_trajectory = node_trajectory_with_stats(K_V, Sig_V, R_sig_S)
+Mu_V       = 0.0025 #@param {type:"slider", min:0, max:100}
+Sig_V      = 0.01 #@param {type:"slider", min:0, max:100}
+R_sig_S    = 0.5 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
+node_trajectory = node_trajectory_with_stats(Mu_V, Sig_V, R_sig_S)
 #%%
 Max_occlusion = 1
 Quantile = 0.05
 #%%
 tracer = tRacer(aSSociator, oOptimizer, node_trajectory, Max_occlusion, Quantile, sub_dir,3)
 #%%
-indx = 6
+indx = 10
 string = '/'+'test_%i_'%indx+str(Max_occlusion)
 tracer.dump_data(string, 15, 1)
 #%%

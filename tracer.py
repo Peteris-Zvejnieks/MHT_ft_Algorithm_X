@@ -22,7 +22,10 @@ class Tracer():
                  path,
                  dim = 2):
 
-        self.dataset            = np.array(pd.read_csv('%s\\dataset.csv'%path))
+
+        dataset                 = pd.read_csv('%s\\dataset.csv'%path)
+        self.columns            = dataset.columns
+        self.dataset            = np.array(dataset)
         self.path               = path
         self.optimizer          = optimizer
         self.associator         = associator
@@ -137,21 +140,31 @@ class Tracer():
             map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
             map(os.remove, glob.glob(output_path + '/trajectories/**.jpg'))
 
+
+        cols = ['dt'] + ['d'+x for x in self.columns[2:]] + ['likelihoods']
         for i, track in tqdm(enumerate(interpretation.trajectories), desc = 'Saving trajectories: '):
 
             fig = plt.figure()
             ax = fig.gca(projection='3d')
-            ax.plot(track.positions[:,0], track.positions[:,1], track.positions[:,2], label='parametric curve', marker='o', ms=1, mec = 'black')
+            X, Y, Z = track.positions[:,0], track.positions[:,1], track.positions[:,2]
+            zeros = np.zeros_like(Z)
+            ax.plot(X, Y, Z, label='parametric curve', marker='o', ms=1, mec = 'black')
+            ax.plot(X, Y, zeros, label='parametric curve',  ms=1)
+            ax.plot(X, zeros + 0.03, Z, label='parametric curve',  ms=1)
+            ax.plot(zeros, Y, Z, label='parametric curve',  ms=1)
             ax.set(xlim = (0, 0.09), ylim = (0, 0.03), zlim=(0.015, 0.135))
             plt.tight_layout()
+            ax.set_xlabel('X')
+            ax.set_ylabel('Y')
+            ax.set_zlabel('Z')
             plt.savefig(output_path + '/trajectories/trajectory_%i.jpg'%i)
             plt.close()
 
-            with open(output_path + '/trajectories/data_%i.csv'%i, 'w'): pass
-            np.savetxt(output_path + '/trajectories/data_%i.csv'%i, track.data, delimiter=",")
+            table = pd.DataFrame(data = track.data, columns = self.columns)
+            table.to_csv(output_path + '/trajectories/data_%i.csv'%i)
 
-            with open(output_path + '/trajectories/changes_%i.csv'%i, 'w'): pass
-            np.savetxt(output_path + '/trajectories/changes_%i.csv'%i, track.changes, delimiter=",")
+            table = pd.DataFrame(data = track.changes, columns = cols)
+            table.to_csv(output_path + '/trajectories/changes_%i.csv'%i)
 
         with open(output_path + '/trajectories/events.csv', 'w') as file:
             events_str = ''
