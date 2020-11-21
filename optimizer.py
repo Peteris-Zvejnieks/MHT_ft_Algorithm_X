@@ -1,4 +1,5 @@
 from algorithm_x import AlgorithmX
+import networkx as nx
 import numpy as np
 
 '''
@@ -15,22 +16,49 @@ class optimizer():
 
     def optimize(self, associations):
         self._prep(associations)
-        mem = [0, 0, 0]
-        for X in self.iter:
-            likelihood = self.calculate_likelihood_given_some_hypothesis(X)
-            if likelihood > mem[2]: mem = [X, self.all_likelihoods[(X, self.pos)], likelihood]
-        if mem[2] == 0 : optimizer.Likelihood0(len(X))
-        return mem
+        X = np.zeros(self.num, dtype = np.uint8)
 
-    def calculate_likelihood_given_some_hypothesis(self, X):
-        return np.prod(self.all_likelihoods[(X, self.pos)])
+        for collection in self.collections:
+            Universe, associations, likelihoods = (), [], np.zeros((2, len(collection)))
+            for j, i in enumerate(collection):
+                associations.append(self.flattened_associations[i])
+                Universe += self.flattened_associations[i]
+                likelihoods[:, j] = self.all_likelihoods[:, i]
+
+            pos = np.arange(len(collection))
+            Universe = tuple(set(Universe))
+            mapped_associations = [tuple(map(lambda x: Universe.index(x), asc)) for asc in associations]
+
+            search_space = optimization_reducer(len(Universe), mapped_associations)
+            self.iter = search_space.generator()
+
+            mem = [0, 0]
+            for x in self.iter:
+                likelihood = np.prod(likelihoods[(x, pos)])
+                if likelihood > mem[1]: mem = [x, likelihood]
+            if mem[1] == 0: optimizer.Likelihood0(len(X))
+            for j, i in enumerate(collection): X[i] = mem[0][j]
+        return [X, self.all_likelihoods[(X, self.pos)], np.prod(self.all_likelihoods[(X, self.pos)])]
 
     def _prep(self, associations):
-        self.associations, self.Ys, n = associations
-        self.pos = np.arange(len(self.associations))
+        self.associations, self.Ys, self.n = associations
+        self.num = len(self.associations)
+        self.pos = np.arange(self.num)
         self._calculate_likelihoods()
-        search_space = optimization_reducer(n, self.associations)
-        self.iter = search_space.generator()
+        self._find_disjoint_collections()
+
+    def _find_disjoint_collections(self):
+        graph = nx.Graph()
+        graph.add_nodes_from(list(range(self.n)))
+
+        for association in self.associations:
+            for parent in association[0]:
+                for child in association[1]:
+                    graph.add_edge(parent, child)
+
+        sub_graphs = (graph.subgraph(c) for c in nx.connected_components(graph))
+        self.flattened_associations = list(map(lambda asc: asc[0] + asc[1], self.associations))
+        self.collections = [[i for i, asc in enumerate(self.flattened_associations) if asc[0] in sub_graph] for sub_graph in sub_graphs]
 
     def _calculate_likelihoods(self):
         positive_likelihoods = np.zeros(self.pos.size, dtype = np.float64)
