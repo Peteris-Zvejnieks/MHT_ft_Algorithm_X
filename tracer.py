@@ -19,9 +19,12 @@ class Tracer():
                  quantile,
                  path,
                  dim = 2):
-
+                 
         self.dataset            = np.array(pd.read_excel('%s\\dataset.xlsx'%path))
+        index                   = pd.MultiIndex.from_tuples(list(map(tuple, np.array(self.dataset, dtype = np.uint16)[:,:2])))
+        self.multi_indexed      = pd.DataFrame(self.dataset[:,:2].astype(np.uint16), index = index)
         self.path               = path
+
         self.optimizer          = optimizer
         self.associator         = associator
         self.node_trajectory    = node_trajectory
@@ -70,11 +73,10 @@ class Tracer():
 
     def _get_groups(self, start, stop):
         nodes1, nodes2 = [], []
-        for node in self.graph.nodes():
-            if node in self.special_nodes: continue
-            if (time := self.data[node][0]) < start or time > stop: continue
-            if list(self.graph._succ[node]) == [] and start <= time <  stop: nodes1.append(node)
-            if list(self.graph._pred[node]) == [] and start <  time <= stop: nodes2.append(node)
+        nodes1 = list(map(tuple, np.array(self.multi_indexed.loc[slice(start, stop - 1), :])))
+        nodes2 = list(map(tuple, np.array(self.multi_indexed.loc[slice(start + 1, stop), :])))
+        nodes1 = [x for x in nodes1 if list(self.graph._succ[x]) == []]
+        nodes2 = [x for x in nodes2 if list(self.graph._pred[x]) == []]
         return(list(map(self._get_trajectory, nodes1)), list(map(self._get_trajectory, nodes2)))
 
     def _get_trajectory(self, node0):
