@@ -21,11 +21,8 @@ class Tracer():
                  dim = 2):
 
         self.dataset            = np.array(pd.read_excel('%s\\dataset.xlsx'%path))
-<<<<<<< Updated upstream
-=======
         index                   = pd.MultiIndex.from_tuples(list(map(tuple, np.array(self.dataset, dtype = np.uint16)[:,:2])))
         self.multi_indexed      = pd.DataFrame(self.dataset, index = index)
->>>>>>> Stashed changes
         self.path               = path
         self.optimizer          = optimizer
         self.associator         = associator
@@ -71,21 +68,11 @@ class Tracer():
                     self.graph.add_edges_from(edges)
 
     def _get_groups(self, start, stop):
-<<<<<<< Updated upstream
-        nodes1, nodes2 = [], []
-        for node in self.graph.nodes():
-            if node in self.special_nodes: continue
-            if (time := self.data[node][0]) < start or time > stop: continue
-            if list(self.graph._succ[node]) == [] and start <= time <  stop: nodes1.append(node)
-            if list(self.graph._pred[node]) == [] and start <  time <= stop: nodes2.append(node)
-        return(list(map(self._get_trajectory, nodes1)), list(map(self._get_trajectory, nodes2)))
-=======
         nodes_within_time_frame_1   = list(map(tuple, np.array(self.multi_indexed.loc[slice(start, stop - 1), :], dtype=np.uint16)[:,:2]))
         nodes_within_time_frame_2   = list(map(tuple, np.array(self.multi_indexed.loc[slice(start + 1, stop), :], dtype=np.uint16)[:,:2]))
         nodes_without_continuation  = [x for x in nodes_within_time_frame_1 if list(self.graph._succ[x]) == []]
         nodes_without_origin        = [x for x in nodes_within_time_frame_2 if list(self.graph._pred[x]) == []]
         return(list(map(self._get_trajectory, nodes_without_continuation)), list(map(self._get_trajectory, nodes_without_origin)))
->>>>>>> Stashed changes
 
     def _get_trajectory(self, node0):
         backwards_search    = lambda x: list(y for y in self.graph._pred[x] if type(y) is not str)
