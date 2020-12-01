@@ -144,6 +144,6 @@ class Associator():
     def _for_optimizer(self, x):
         a, b = x
         f0 = lambda x: tuple(map(lambda y: y + self.offset, x))
-        if   type(a[0]) is str : return f0(b)
-        elif type(b[0]) is str : return a
-        else                   : return a + f0(b)
+        if   type(a[0]) is str : return (tuple(), f0(b))
+        elif type(b[0]) is str : return (a, tuple())
+        else                   : return (a, f0(b))
