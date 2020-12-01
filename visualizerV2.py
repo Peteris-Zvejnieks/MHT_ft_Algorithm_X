@@ -33,6 +33,8 @@ class Colorbar_overlay():
 class Graph_interpreter():
     def __init__(self, graph, special_nodes, node_trajectory):
         self.graph = graph
+        self.data = nx.get_node_attributes(self.graph, 'data')
+        self.likelihoods = nx.get_edge_attributes(self.graph, 'likelihood')
         self.special_nodes = special_nodes
         self.node_trajectory = node_trajectory
         self._trajectories()
@@ -50,18 +52,23 @@ class Graph_interpreter():
         tmp_graph = tmp_graph.to_undirected()
         self.paths = list(self.graph.subgraph(c) for c in nx.connected_components(tmp_graph))
         self.paths.sort(key = lambda x: -len(x.nodes))
-        self.trajectories = list(map(self.node_trajectory, self.paths))
+        def trajectory_mapper(path):
+            nodes = list(path.nodes)
+            nodes.sort(key = lambda x: x[0])
+            data = np.array(list(map(lambda x: self.data[x], nodes)))
+            likelihoods = np.array(list(map(lambda x: self.likelihoods[x], zip(nodes[:-1], nodes[1:]))))
+            return self.node_trajectory(data, likelihoods, 2)
+        self.trajectories = list(map(trajectory_mapper, self.paths))
 
     def events(self):
         self.events = []
         tmp_graph = self.graph.copy()
-        likelihoods = nx.get_edge_attributes(self.graph, 'likelihood')
-        for entry in list(tmp_graph.out_edges(self.special_nodes[0])):   self.events.append([[self.special_nodes[0]],    [self._find_by_node(entry[1])],                 likelihoods[entry]])
-        for exitt in list(tmp_graph.in_edges( self.special_nodes[1])):   self.events.append([[self._find_by_node(exitt[0])],                 [self.special_nodes[1]],    likelihoods[exitt]])
+        for entry in list(tmp_graph.out_edges(self.special_nodes[0])):   self.events.append([[self.special_nodes[0]],    [self._find_by_node(entry[1])],                 self.likelihoods[entry]])
+        for exitt in list(tmp_graph.in_edges( self.special_nodes[1])):   self.events.append([[self._find_by_node(exitt[0])],                 [self.special_nodes[1]],    self.likelihoods[exitt]])
         tmp_graph.remove_nodes_from(self.special_nodes)
         for node in tmp_graph.nodes:
-            if len(ins  := list(tmp_graph.in_edges( node))) > 1: self.events.append([list(map(lambda edge: self._find_by_node(edge[0]), ins)), [self._find_by_node(node)],  likelihoods[ ins[0]]])
-            if len(outs := list(tmp_graph.out_edges(node))) > 1: self.events.append([[self._find_by_node(node)], list(map(lambda edge: self._find_by_node(edge[1]), outs)), likelihoods[outs[1]]])
+            if len(ins  := list(tmp_graph.in_edges( node))) > 1: self.events.append([list(map(lambda edge: self._find_by_node(edge[0]), ins)), [self._find_by_node(node)],  self.likelihoods[ ins[0]]])
+            if len(outs := list(tmp_graph.out_edges(node))) > 1: self.events.append([[self._find_by_node(node)], list(map(lambda edge: self._find_by_node(edge[1]), outs)), self.likelihoods[outs[1]]])
 
     def families(self):
         tmp_graph = self.graph.copy().to_undirected()
@@ -110,7 +117,7 @@ class Visualizer():
             family_photos[i] = np.where(color_bar != 0, color_bar, family_photos[i])
         return family_photos
 
-    def ShowHistory(self, memory = 15, min_trajectory_size = 1, key = 'velocity'):
+    def ShowHistory(self, memory = 15, min_trajectory_size = 1, key = 'ID'):
         events = self.interpretation.events
         images = copy.deepcopy(self.images)
         dcmap = discrete_colormap(memory * 2)
@@ -165,15 +172,14 @@ class Visualizer():
             img = cv2.arrowedLine(img, crd1, crd2, color, self.width)
         return img
 
-    def ShowTrajectories(self, key = 'velocity'):
+    def ShowTrajectories(self):
         cmap = cm.plasma
         color_bar_gen = Colorbar_overlay(cmap, self.shape)
         imgs = np.zeros((len(self.trajectories),) + self.shape, dtype=np.uint8)
         for i, tr in tqdm(enumerate(self.trajectories), desc = 'Drawing trajectories '):
-            values = nx.get_edge_attributes(tr.backbone, key)
-            min_max = [min(tuple(values.values()) + (1e3,)), max(tuple(values.values()) + (0,))]
-            for edge in zip(tr.nodes[:-1], tr.nodes[1:]):
-                color = self._map_color(cmap(self._normalizer(values[edge], min_max)))
+            min_max = [min(tuple(tr.likelihoods) + (1e3,)), max(tuple(tr.likelihoods) + (0,))]
+            for edge, likelihood in zip(zip(tr.nodes[:-1], tr.nodes[1:]), tr.likelihoods):
+                color = self._map_color(cmap(self._normalizer(likelihood, min_max)))
                 imgs[i] = self._draw_edge(imgs[i], edge, color)
             color_bar = color_bar_gen(min_max)
             imgs[i] = np.where(color_bar != 0, color_bar, imgs[i])

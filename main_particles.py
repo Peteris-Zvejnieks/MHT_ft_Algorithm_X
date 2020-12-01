@@ -66,11 +66,11 @@ Quantile = 0.5
 tracer = tTracer(aSSociator, oOptimizer, trajectory_stats,
                 Max_occlusion, Quantile, sub_dir)
 #%%
-indx = 33
+indx = 3
 string = '/'+'test_new_constr _%i_'%indx+str(Max_occlusion)
 #%%
-tracer.dump_data(string, 15, 5)
-#%%
-parameters = {name: eval(name) for name in dir() if name[0].isupper() and name != 'In' and name != 'Out'}
-import json
-with open(sub_dir + '/Tracer Output' + '/'+string + '/parameters.json', 'w') as fp: json.dump(parameters, fp)
+# tracer.dump_data(string, 15, 5)
+# #%%
+# parameters = {name: eval(name) for name in dir() if name[0].isupper() and name != 'In' and name != 'Out'}
+# import json
+# with open(sub_dir + '/Tracer Output' + '/'+string + '/parameters.json', 'w') as fp: json.dump(parameters, fp)

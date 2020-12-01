@@ -21,6 +21,11 @@ class Tracer():
                  dim = 2):
 
         self.dataset            = np.array(pd.read_excel('%s\\dataset.xlsx'%path))
+<<<<<<< Updated upstream
+=======
+        index                   = pd.MultiIndex.from_tuples(list(map(tuple, np.array(self.dataset, dtype = np.uint16)[:,:2])))
+        self.multi_indexed      = pd.DataFrame(self.dataset, index = index)
+>>>>>>> Stashed changes
         self.path               = path
         self.optimizer          = optimizer
         self.associator         = associator
@@ -54,21 +59,19 @@ class Tracer():
                 edges = []
                 for parent in parents:
                     try: parent = group1[parent].nodes[-1]
-                    except: p1, t1 = np.zeros(2), -1e48
-                    else: p1, t1 = np.array(self.data[parent][2:4]), self.data[parent][0]
+                    except: pass
                     for child in children:
                         try: child = group2[child].nodes[0]
-                        except: p2, t2 = np.zeros(2), 1e48
-                        else: p2, t2 = np.array(self.data[child][2:4]), self.data[child][0]
-                        v = np.dot(p1, p2) / (t2-t1)
-                        edges.append((parent, child, {'likelihood': likelihood, 'velocity' : v}))
+                        except: pass
+                        edges.append((parent, child, {'likelihood': likelihood}))
 
-                if any([any([self.data[x[0]][0] == time     for x in edges]),
-                        any([self.data[x[1]][0] == time + 1 for x in edges]),
+                if any([any([x[0][0] == time     for x in edges]),
+                        any([x[1][0] == time + 1 for x in edges]),
                         likelihood > self.decision_boundary]):
                     self.graph.add_edges_from(edges)
 
     def _get_groups(self, start, stop):
+<<<<<<< Updated upstream
         nodes1, nodes2 = [], []
         for node in self.graph.nodes():
             if node in self.special_nodes: continue
@@ -76,24 +79,43 @@ class Tracer():
             if list(self.graph._succ[node]) == [] and start <= time <  stop: nodes1.append(node)
             if list(self.graph._pred[node]) == [] and start <  time <= stop: nodes2.append(node)
         return(list(map(self._get_trajectory, nodes1)), list(map(self._get_trajectory, nodes2)))
+=======
+        nodes_within_time_frame_1   = list(map(tuple, np.array(self.multi_indexed.loc[slice(start, stop - 1), :], dtype=np.uint16)[:,:2]))
+        nodes_within_time_frame_2   = list(map(tuple, np.array(self.multi_indexed.loc[slice(start + 1, stop), :], dtype=np.uint16)[:,:2]))
+        nodes_without_continuation  = [x for x in nodes_within_time_frame_1 if list(self.graph._succ[x]) == []]
+        nodes_without_origin        = [x for x in nodes_within_time_frame_2 if list(self.graph._pred[x]) == []]
+        return(list(map(self._get_trajectory, nodes_without_continuation)), list(map(self._get_trajectory, nodes_without_origin)))
+>>>>>>> Stashed changes
 
     def _get_trajectory(self, node0):
-        nodes = [node0]
-        functions = [lambda x: list(y for y in self.graph._pred[x].keys() if type(y) is not str),
-                     lambda x: list(y for y in self.graph._succ[x].keys() if type(y) is not str)]
-        direction = int(len(functions[0](node0)) > 0) - int(len(functions[1](node0)) > 0)
+        backwards_search    = lambda x: list(y for y in self.graph._pred[x] if type(y) is not str)
+        forwards_search     = lambda x: list(y for y in self.graph._succ[x] if type(y) is not str)
+
+        direction = int(len(forwards_search(node0)) > 0) - int(len(backwards_search(node0)) > 0)
+
+        nodes, likelihoods = [node0], []
 
         if direction:
-            i = int(direction > 0)
-            f1, f2 = functions[1 - i], functions[i]
-            while True:
-                nodes_o_i = f1(nodes[-1])
-                if len(nodes_o_i) == 1 and len(f2(nodes_o_i[0])) == 1:
-                    nodes.append(nodes_o_i[0])
-                else: break
+            if direction > 0:
+                while True:
+                    nodes_out = forwards_search(nodes[-1])
+                    if len(nodes_out) == 1 and len(backwards_search(nodes_out[0])) == 1:
+                        likelihoods.append(self.graph._succ[nodes[-1]][nodes_out[0]]['likelihood'])
+                        nodes.append(nodes_out[0])
+                    else: break
+            if direction < 0:
+                while True:
+                    nodes_in = backwards_search(nodes[-1])
+                    if len(nodes_in) == 1 and len(forwards_search(nodes_in[0])) == 1:
+                        likelihoods.append(self.graph._pred[nodes[-1]][nodes_in[0]]['likelihood'])
+                        nodes.append(nodes_in[0])
+                    else:
+                        nodes.reverse()
+                        likelihoods.reverse()
+                        break
 
-        nodes.sort(key = lambda x: x[0])
-        return self.node_trajectory(self.graph.subgraph(set(nodes)))
+        data = np.array(list(map(lambda x: self.multi_indexed.loc[x[0], x[1]], nodes)))
+        return self.node_trajectory(data, np.array(likelihoods), dim = self.dim)
 
     def _eradicate_unlikely_connections(self, quantile):
         likelihoods             = nx.get_edge_attributes(self.graph, 'likelihood')
@@ -104,20 +126,16 @@ class Tracer():
     def _initialize_graph(self):
         self.graph         = nx.DiGraph()
         self.special_nodes = ['Entry', 'Exit']
-        self.graph.add_nodes_from(self.special_nodes, data = 'mommy calls me speshal', position = 'special education class', params = 'speshal')
+        self.graph.add_nodes_from(self.special_nodes)
 
-        for adress, point in zip(np.array(self.dataset)[:,:2], np.array(self.dataset)):
+        for adress in np.array(self.dataset)[:,:2]:
             node = tuple(map(int, adress))
-            self.graph.add_node(node, data = list(point), position = point[2:2+self.dim], params = point[2 + self.dim:])
+            self.graph.add_node(node, data = self.multi_indexed.loc[node[0], node[1]])
 
             for i, special_node in enumerate(self.special_nodes):
                 edge = [special_node, node]
                 if i: edge.reverse()
-                self.graph.add_edge(*tuple(edge), likelihood = float(point[0] == self.time_range[i]), velocity = 1e-12)
-
-        self.data       = nx.get_node_attributes(self.graph, 'data')
-        self.position   = nx.get_node_attributes(self.graph, 'position')
-        self.params     = nx.get_node_attributes(self.graph, 'params')
+                self.graph.add_edge(*tuple(edge), likelihood = float(node[0] == self.time_range[i]))
 
     def dump_data(self, sub_folder = None, memory = 15, smallest_trajectories = 1):
         self.images = unzip_images('%s\\Compressed Data\\Shapes.zip'%self.path)
@@ -143,7 +161,7 @@ class Tracer():
 
         map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
         save_func(output_path + '/trajectories',      Vis.ShowTrajectories())
-        for i, track in enumerate(interpretation.trajectories):
+        for i, track in enumerate(self.trajectories):
             with open(output_path + '/trajectories/data_%i.csv'%i, 'w'): pass
             np.savetxt(output_path + '/trajectories/data_%i.csv'%i, track.data, delimiter=",")
 
@@ -157,7 +175,6 @@ class Tracer():
 
         save_func(output_path + '/families',          Vis.ShowFamilies('likelihood'))
         save_func(output_path + '/tracedIDs',         Vis.ShowHistory(memory, smallest_trajectories, 'ID'))
-        save_func(output_path + '/traced_velocities', Vis.ShowHistory(memory, smallest_trajectories, 'velocity'))
 
         del Vis, self.images
 
