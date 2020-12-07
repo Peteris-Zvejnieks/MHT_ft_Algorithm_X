@@ -19,7 +19,7 @@ class Tracer():
                  quantile,
                  path,
                  dim = 2):
-                 
+
         self.dataset            = np.array(pd.read_excel('%s\\dataset.xlsx'%path))
         index                   = pd.MultiIndex.from_tuples(list(map(tuple, np.array(self.dataset, dtype = np.uint16)[:,:2])))
         self.multi_indexed      = pd.DataFrame(self.dataset[:,:2].astype(np.uint16), index = index)
@@ -121,8 +121,8 @@ class Tracer():
         self.position   = nx.get_node_attributes(self.graph, 'position')
         self.params     = nx.get_node_attributes(self.graph, 'params')
 
-    def dump_data(self, sub_folder = None, memory = 15, smallest_trajectories = 1):
-        self.images = unzip_images('%s\\Compressed Data\\Shapes.zip'%self.path)
+    def dump_data(self, images, sub_folder = None, memory = 15, smallest_trajectories = 1):
+        self.images = images
         self.shape = self.images[0].shape
 
         if sub_folder is None:  output_path = self.path + '/Tracer Output'
@@ -142,7 +142,7 @@ class Tracer():
         interpretation.events()
         interpretation.families()
         Vis = Visualizer(self.images, interpretation)
-
+        self.Vis  = Vis
         map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
         save_func(output_path + '/trajectories',      Vis.ShowTrajectories())
         for i, track in enumerate(interpretation.trajectories):
@@ -174,7 +174,6 @@ def unzip_images(path):
 
     scaler_f = lambda x: (2**-8 * int(np.max(x) >= 256) + int(np.max(x) < 256) + 254 * int(np.max(x) == 1))
     scaler   = scaler_f(np.asarray(images[0], np.uint16))
-
     mapper = lambda img:  np.repeat((np.asarray(img, np.uint16) * scaler).astype(np.uint8)[:,:,np.newaxis],3,2)
     images = list(map(mapper, tqdm(images, desc = 'Mapping images ')))
 

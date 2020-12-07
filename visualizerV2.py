@@ -75,7 +75,7 @@ class Visualizer():
         self.shape  = images[0].shape
         self.interpretation = interpretation
         self.trajectories = self.interpretation.trajectories
-        self.width = 2
+        self.width = 6
         self.data = nx.get_node_attributes(self.interpretation.graph, 'data')
 
     def _get_node_crd(self, node):  return (int(self.data[node][2]), self.shape[0] - int(self.data[node][3]))
@@ -144,7 +144,7 @@ class Visualizer():
                 t0 = int(self.trajectories[starts[0]].data[0, 0])
                 f = lambda x: self._draw_merger(x, stops, starts[0])
             elif len(starts) > 1:
-                t0 = int(self.trajectories[stops[0]].data[-1,0])
+                t0 = int(self.trajectories[starts[0]].data[0,0])
                 f = lambda x: self._draw_split(x, stops[0], starts)
             for t in range(t0, min(len(images), t0 + memory)): images[t - 1] = f(images[t - 1])
         return images

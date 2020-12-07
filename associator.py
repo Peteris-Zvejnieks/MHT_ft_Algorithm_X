@@ -41,7 +41,7 @@ class asc_condition_particles(Association_condition):
 
             if   dt <= 0:                                                                   return False
             if dr > max_displ_per_frame * dt:                                               return False
-            if dr > ((stop.ending[5]+start.beginning[5])/2)**0.5 * radius_multiplyer * dt:    return False
+            if dr > ((stop.ending[5]+start.beginning[5])/2)**1/3 * radius_multiplyer * dt:    return False
             if dr < min_displacement * dt:                                                  return True
             else:                                                                           return True
 

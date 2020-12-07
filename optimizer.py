@@ -78,7 +78,7 @@ class optimizer():
         for stat_func in self.stat_funcs:
             if stat_func.check_conditions(measurments1, measurments2):
                 likelihood = stat_func(measurments1, measurments2)
-                if not 1 >= likelihood > 0: raise optimizer.Likelihood0(str(stat_func) + '=> %.4f'%likelihood)
+                if not 1 >= likelihood > 0: raise optimizer.Likelihood0(str(stat_func) + '=> %.4f'%likelihood +str(list(map(lambda x: x.nodes[-1], measurments1))) + str(list(map(lambda x: x.nodes[0], measurments2))))
                 return likelihood
         optimizer.CondtionsNotFound(str(measurments1) + ';' + str(measurments2))
 

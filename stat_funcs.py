@@ -79,7 +79,7 @@ class multi_bubble_likelihood_func(statFunc):
     def __init__(self, sig_displ, k, c, power = 3/2):
         likelihood_displ = lambda p1, p2, dt: np.divide(norm.pdf(np.linalg.norm(p2 - p1), 0, sig_displ*dt),norm.pdf(0, 0, sig_displ*dt))
         likelihood_S     = lambda dS, S_sig: norm.pdf(dS, 0, S_sig)/norm.pdf(0, 0, S_sig)
-        f0 = lambda pos, Ss: np.array([np.dot(pos[:,i], Ss**power)/np.sum(sS**power) for i in range(pos.shape[1])])
+        f0 = lambda pos, Ss: np.array([np.dot(pos[:,i], Ss**power)/np.sum(Ss**power) for i in range(pos.shape[1])])
 
         c = int(c)
         def f(stops, starts):
