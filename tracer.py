@@ -19,7 +19,7 @@ class Tracer():
                  quantile,
                  path,
                  dim = 2):
-        
+
         dataset = pd.read_excel('%s\\dataset.xlsx'%path)
         self.dataset            = np.array(dataset)
         self.header = dataset.columns
@@ -148,12 +148,14 @@ class Tracer():
         self.Vis  = Vis
         map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
         save_func(output_path + '/trajectories',      Vis.ShowTrajectories())
-        for i, track in enumerate(interpretation.trajectories):
-            with open(output_path + '/trajectories/data_%i.csv'%i, 'w'): pass
-            np.savetxt(output_path + '/trajectories/data_%i.csv'%i, track.data, delimiter=",")
 
-            with open(output_path + '/trajectories/changes_%i.csv'%i, 'w'): pass
-            np.savetxt(output_path + '/trajectories/changes_%i.csv'%i, track.changes, delimiter=",")
+        cols = ['dt'] + ['d'+x for x in self.columns[2:]] + ['likelihoods']
+        for i, track in enumerate(interpretation.trajectories):
+            table = pd.DataFrame(data = track.data, columns = self.header)
+            table.to_csv(output_path + '/trajectories/data_%i.csv'%i)
+
+            table = pd.DataFrame(data = track.changes, columns=cols)
+            table.to_csv(output_path + '/trajectories/changes_%i.csv'%i)
 
         with open(output_path + '/trajectories/events.csv', 'w') as file:
             events_str = ''
