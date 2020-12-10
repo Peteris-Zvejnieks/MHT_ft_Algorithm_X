@@ -59,9 +59,9 @@ aAsc_condition  = asc_condition(Max_displacement_per_frame, Radius_multiplyer, M
 Upsilon                     = 0.09 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
 K_v                         = 60 #@param {type:"slider", min:0, max:300}
 Max_acc                     = 60 #@param {type:"slider", min:0, max:300}
-cComb_constr = comb_constr(Upsilon, Mu_v, Max_acc)
+cComb_constr = comb_constr(Upsilon, K_v, Max_acc)
 
-aAssociator = aAssociator(aAsc_condition, cComb_constr)
+aASSociator = aAssociator(aAsc_condition, cComb_constr)
 #%%
 Mu_V       = 50 #@param {type:"slider", min:0, max:100}
 Sig_V      = 30 #@param {type:"slider", min:0, max:100}
@@ -70,9 +70,9 @@ node_trajectory = node_trajectory_with_stats(Mu_V, Sig_V, R_sig_S)
 #%%
 Max_occlusion = 2
 Quantile = 0.05
-tracer = tTracer(ASSociator, oOptimizer, node_trajectory, Max_occlusion, Quantile, sub_dir)
+tracer = tTracer(aASSociator, oOptimizer, node_trajectory, Max_occlusion, Quantile, sub_dir)
 #%%
-indx = 23
+indx = 1
 prepend = 'test_%i_'%indx
 tracer.dump_data(images, '/'+prepend+str(Max_occlusion), 15, 1)
 #%%
