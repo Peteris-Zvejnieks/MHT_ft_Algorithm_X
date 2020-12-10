@@ -44,7 +44,7 @@ class node_trajectory_base():
             points = [self.positions[:,i] for i in range(self.positions.shape[1])]
             self.tck, self.u = interp.splprep(points, u = self.time, k = k, s = 8e2)
 
-class node_trajectory(node_trajectory_base):
+class node_trajectory_speed(node_trajectory_base):
     def __init__(self, graph):
         super().__init__(graph)
         self._get_changes()
@@ -74,6 +74,29 @@ class node_trajectory(node_trajectory_base):
             self.acceleration[:,0] = np.arccos(dot_products/(norms[1:] * norms[:-1]))/self.changes[1:,0]
             self.acceleration[:,1] = (norms[1:] - norms[:-1])/self.changes[1:,0]
 
+class particle_stat_trajectory(node_trajectory_speed):
+    def __init__(self, graph):
+        super().__init__(graph)
+    def _get_stats(self):
+        velocities   = np.linalg.norm(self.displacements, axis = 1)/self.changes[:,0]
+        self.mu_V    = np.average(velocities)
+        self.sig_V   = np.std(velocities)
+
+class particle_trajectory_with_default_stats():
+    def __init__(self, mu_V0, sig_V0):
+        self.mu_V0, self.sig_V0 = mu_V0, sig_V0
+
+    def __call__(self, graph):
+        trajectory = particle_stat_trajectory(graph)
+        if len(trajectory) <= 2:
+            trajectory.mu_V    = self.mu_V0
+            trajectory.sig_V   = self.sig_V0
+        else: trajectory._get_stats()
+        return trajectory
+
+class node_trajectory_stats(node_trajectory_speed):
+    def __init__(self, graph):
+        super().__init__(graph)
     def _get_stats(self):
         velocities   = np.linalg.norm(self.displacements, axis = 1)/self.changes[:,0]
         self.mu_V    = np.average(velocities)
@@ -86,7 +109,7 @@ class node_trajectory_with_stats():
         self.mu_V0, self.sig_V0, self.r_sig_S0 = mu_V0, sig_V0, r_sig_S0
 
     def __call__(self, graph):
-        trajectory = node_trajectory(graph)
+        trajectory = node_trajectory_stats(graph)
         if len(trajectory) <= 2:
             trajectory.mu_V    = self.mu_V0
             trajectory.sig_V   = self.sig_V0

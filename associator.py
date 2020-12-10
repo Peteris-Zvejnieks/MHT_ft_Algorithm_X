@@ -29,9 +29,7 @@ class asc_condition(Association_condition):
 
 class asc_condition_particles(Association_condition):
     def __init__(self,
-                 max_displ_per_frame = 45,
-                 radius_multiplyer = 3,
-                 min_displacement = 6):
+                 Soi = 45):
 
         def f(stop, start):
             if stop == start:                                                               return False
@@ -40,9 +38,7 @@ class asc_condition_particles(Association_condition):
             dr = np.linalg.norm(start.beginning[2:4] - stop.ending[2:4])
 
             if   dt <= 0:                                                                   return False
-            if dr > max_displ_per_frame * dt:                                               return False
-            if dr > ((stop.ending[5]+start.beginning[5])/2)**0.5 * radius_multiplyer * dt:    return False
-            if dr < min_displacement * dt:                                                  return True
+            if dr > Soi * dt:                                                               return False
             else:                                                                           return True
 
         super().__init__(f)
@@ -52,6 +48,30 @@ class Combination_constraint():
         self.f = f
     def __call__(self, Y1, Y2):
         return self.f(Y1, Y2)
+
+class comb_constr_particles(Combination_constraint):
+    def __init__(self, v_scaler, max_a):
+        d_fi = lambda u, v: np.arccos(np.dot(u, v)/(np.linalg.norm(u)*np.linalg.norm(v)))
+        def f(stops, starts):
+            #If new or gone - defaults to True
+            if len(stops) == 0 or len(starts) == 0: return True
+            #Filters out quick changes in direction depending on velocity
+            if len(stops) == 1 and len(starts) == 1:
+                stop, start = stops[0], starts[0]
+                dt = start.beginning[0] - stop.ending[0]
+                mid_v = (start.positions[0,:] - stop.positions[-1,:])/dt
+                if len(stop)  >= 2:
+                    v = stop.displacements[-1,:]/stop.changes[-1,0]
+                    acc = 2 * (mid_v - v)/(stop.changes[-1,0] + dt)
+                    if np.linalg.norm(acc) > max_a: return False
+                    if d_fi(v, mid_v) > (np.pi + 1e-6) * np.exp(-np.linalg.norm(v)/v_scaler): return False
+                if len(start) >= 2:
+                    v = start.displacements[0,:]/start.changes[0,0]
+                    acc = 2 * (v - mid_v)/(start.changes[0,0] + dt)
+                    if np.linalg.norm(acc) > max_a: return False
+                    if d_fi(mid_v, v) > (np.pi + 1e-3) * np.exp(-np.linalg.norm(v)/v_scaler): return False
+            return True
+        super().__init__(f)
 
 class comb_constr(Combination_constraint):
     def __init__(self, upsilon, v_scaler = 10, max_a = 5):
@@ -117,7 +137,6 @@ class Associator():
             combinations    = self._getAllCombinations(associables, 'Entry', 2)
             all_associations1.extend(combinations)
             all_associations2.extend([(j,) for x in combinations])
-
         all_Y1 = [self._map_adresses_to_data(group1, asc) for asc in all_associations1]
         all_Y2 = [self._map_adresses_to_data(group2, asc) for asc in all_associations2]
         Ys, ascs = tuple(), tuple()
@@ -126,7 +145,6 @@ class Associator():
                 Ys   += ((Y1, Y2),)
                 ascs += ((asc1, asc2),)
         associations_for_optimizer = list(map(self._for_optimizer, ascs))
-
         if self.for_optimizer: return (associations_for_optimizer, Ys, ascs)
         else: return (Ys, ascs)
 

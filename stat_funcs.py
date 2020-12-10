@@ -19,6 +19,65 @@ class statFunc():
         else: b = len(Y2)
         return (self.conditions[0] == a) and (self.conditions[1] == b)
 
+class paricle_movement_likelihood(statFunc):
+    def __init__(self, sig_displacement, sig_acc, k_v, w1, w2):
+        likelihood_displ = lambda dr, dt  : norm.pdf(dr, 0, sig_displacement * dt)/norm.pdf(0, 0, sig_displacement * dt)
+        likelihood_accel = lambda acc: norm.pds(acc, 0, sig_acceleration)/norm.pds(0, 0, sig_acceleration)
+        likelihood_angle = lambda v, phi: norm.pdf(phi, 0, np.pi * np.exp(-1/vk * np.linalg.norm(v1)))/norm.pdf(0, 0, np.pi * np.exp(-1/k_v * np.linalg.norm(v)))
+        def f(stop, start):
+            stop, start = stop[0], start[0]
+
+            t1  , t2    = stop.ending[0], start.beginning[0]
+            dt = t2 - t1
+            vk = (start.positions[0,:] - stop.positions[-1,:])/dt
+            try:
+                p1 = stop(t1 + dt/2)
+                v1 = stop.velocities[-1,:]
+                dt1 = stop.changes[-1,0]
+                phi1 = np.arccos(np.dot(v1, vk)/(np.linalg.norm(v1)*np.linalg.norm(vk)))
+                acc_1= 2*(np.linalg.norm(vk-v1)/ (dt + dt1))
+                b1 = likelihood_angle(v1, phi1)
+                c1 = likelihood_accel(acc_1)
+                try:
+                    p2 = start(t2 - dt/2)
+                    v2 = start.velocities[0,:]
+                    dt2 = start.changes[0,0]
+                    phi2 = np.arccos(np.dot(v2, vk)/(np.linalg.norm(v2)*np.linalg.norm(vk)))
+                    acc_2= 2*(np.linalg.norm(v2-vk)/ (dt + dt2))
+                    b2 = likelihood_angle(vk, phi2)
+                    c2 = likelihood_accel(acc_2)
+                    b = b1 * b2
+                    c = c1 * c2
+
+                except:
+                    p1 = stop(t2)
+                    p2 = start.positions[0,:]
+                    c = c1**2
+                finally: a = likelihood_displ(np.linalg.norm(p2 - p1), dt)
+
+            except:
+                p1 = stop.positions[-1,:]
+                try:
+                    p2 = start(t1)
+                    a = likelihood_displ(np.linalg.norm(p2 - p1), dt)
+                    phi2 = np.arccos(np.dot(v2, vk)/(np.linalg.norm(v2)*np.linalg.norm(vk)))
+                    acc_2= 2*(np.linalg.norm(v2-vk)/ (dt + dt2))
+                    b2 = likelihood_angle(vk, phi2)
+                    c2 = likelihood_accel(acc_2)
+                    c = c2
+                    b = b2**2
+                except:
+                    p2 = start.positions[0,:]
+                    dr      = np.linalg.norm(p2 - p1)
+                    mu_d    = (start.mu_V + stop.mu_V)/2 * dt
+                    sigma_d = (start.sig_V + stop.sig_V)/2 * dt
+                    a       = norm.pdf(dr, mu_d, sigma_d)/norm.pdf(mu_d, mu_d, sigma_d)
+                    b, c = a**2, a**2
+            finally: return w1*a + (1-w1)*(w2 * b + (1-w2) * c)
+
+        super().__init__(f, [1,1])
+
+
 class movement_likelihood_func(statFunc):
     def __init__(self, sig_displacement, k):
         likelihood_displ = lambda dr, dt  : norm.pdf(dr, 0, sig_displacement * dt)/norm.pdf(0, 0, sig_displacement * dt)

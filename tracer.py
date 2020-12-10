@@ -7,6 +7,7 @@ import numpy as np
 import imageio
 import zipfile
 import glob
+import time as Tyme
 import os
 import io
 
@@ -19,7 +20,7 @@ class Tracer():
                  quantile,
                  path,
                  dim = 2):
-                 
+
         self.dataset            = np.array(pd.read_excel('%s\\dataset.xlsx'%path))
         index                   = pd.MultiIndex.from_tuples(list(map(tuple, np.array(self.dataset, dtype = np.uint16)[:,:2])))
         self.multi_indexed      = pd.DataFrame(self.dataset[:,:2].astype(np.uint16), index = index)
@@ -50,8 +51,10 @@ class Tracer():
 
             ascs_4_opti, Ys, ascs = self.associator(group1, group2)
             ascs1, ascs2 = zip(*ascs)
+            #print('\n',len(ascs))
+            #_t1 = Tyme.perf_counter()
             X, all_likelihoods, Likelihood = self.optimizer.optimize((ascs_4_opti, Ys, len(group1) + len(group2)))
-
+            #print(Tyme.perf_counter() - _t1)
             for parents, children, x, likelihood in zip(ascs1, ascs2, X, all_likelihoods):
                 if not x: continue
                 edges = []
@@ -139,10 +142,9 @@ class Tracer():
         nx.readwrite.gml.write_gml(self.graph, output_path + '/graph.gml', stringizer = lambda x: str(x))
         interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
         self.trajectories = interpretation.trajectories
-        interpretation.events()
-        interpretation.families()
+        interpretation._events()
+        # interpretation.families()
         Vis = Visualizer(self.images, interpretation)
-
         map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
         save_func(output_path + '/trajectories',      Vis.ShowTrajectories())
         for i, track in enumerate(interpretation.trajectories):
@@ -152,14 +154,14 @@ class Tracer():
             with open(output_path + '/trajectories/changes_%i.csv'%i, 'w'): pass
             np.savetxt(output_path + '/trajectories/changes_%i.csv'%i, track.changes, delimiter=",")
 
-        with open(output_path + '/trajectories/events.csv', 'w') as file:
-            events_str = ''
-            for event in interpretation.events: events_str += str(event) + '\n'
-            file.write(events_str)
+        # with open(output_path + '/trajectories/events.csv', 'w') as file:
+        #     events_str = ''
+        #     for event in interpretation.events: events_str += str(event) + '\n'
+        #     file.write(events_str)
 
-        save_func(output_path + '/families',          Vis.ShowFamilies('likelihood'))
+        # save_func(output_path + '/families',          Vis.ShowFamilies('likelihood'))
         save_func(output_path + '/tracedIDs',         Vis.ShowHistory(memory, smallest_trajectories, 'ID'))
-        save_func(output_path + '/traced_velocities', Vis.ShowHistory(memory, smallest_trajectories, 'velocity'))
+        # save_func(output_path + '/traced_velocities', Vis.ShowHistory(memory, smallest_trajectories, 'velocity'))
 
         del Vis, self.images
 
@@ -169,7 +171,7 @@ def unzip_images(path):
         names = zp.namelist()
         try:    names.remove(*[x for x in names if len(x.split('/')[-1]) == 0 or x.split(',')[-1] == 'ini'])
         except: pass
-        names.sort(key = lambda x: int(x.split('/')[-1].split('_')[-1].split('.')[0]))
+        names.sort(key = lambda x: int(x.split('/')[-1].split('_')[-1].split(')')[-1].split('.')[0]))
         images = list(map(imgFromZip, tqdm(names, desc = 'Loading images ')))
 
     scaler_f = lambda x: (2**-8 * int(np.max(x) >= 256) + int(np.max(x) < 256) + 254 * int(np.max(x) == 1))

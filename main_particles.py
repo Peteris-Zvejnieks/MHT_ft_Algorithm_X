@@ -1,11 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stat_funcs import new_or_gone_likelihood_func, movement_likelihood_func
+from stat_funcs import new_or_gone_likelihood_func, paricle_movement_likelihood
 from associator import Associator as aAssociator
-from associator import asc_condition_particles, comb_constr
+from associator import asc_condition_particles, comb_constr_particles
 from optimizer import optimizer
-from trajectories import node_trajectory_with_stats
+from trajectories import particle_trajectory_with_default_stats
 from tracer import Tracer as tTracer
 
 import glob
@@ -19,7 +19,7 @@ w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 12
+I = 13
 
 J = 0
 
@@ -31,8 +31,11 @@ print(sub_dir)
 del(I, J)
 #%%
 Sig_displacement1   = 8
-K1                  = 0.4
-move    = movement_likelihood_func(Sig_displacement1, K1)
+Sig_acc = 8
+KK_v = 8
+W1 = 0.7
+W2 = 0.5
+move    = paricle_movement_likelihood(Sig_displacement1, Sig_acc, KK_v, W1, W2)
 
 A                   = 0.04
 
@@ -43,33 +46,29 @@ gone    = new_or_gone_likelihood_func(-A, width - Boundary, 0, 0)
 
 oOptimizer   = optimizer([move, new, gone])
 #%%
-Max_displ_per_frame = 30
-Radius_multlplyer  = 3
-Min_displacement = 3
-assc_condition  = asc_condition_particles(Max_displ_per_frame, Radius_multlplyer, Min_displacement)
+Soi = 12
+assc_condition  = asc_condition_particles(Soi)
 
-Upsilon = 3
-Mu_v = 30
-Max_acc = 5
-cComb_constr = comb_constr(Upsilon, Mu_v, Max_acc)
+Mu_v = 20
+Max_acc = 8
+cComb_constr = comb_constr_particles(Mu_v, Max_acc)
 
 aSSociator = aAssociator(assc_condition, cComb_constr, max_k = 1)
 #%%
-K_V       = 100 #@param {type:"slider", min:0, max:100}
-Sig_V      = 6 #@param {type:"slider", min:0, max:100}
-R_sig_S    = 1 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
-trajectory_stats = node_trajectory_with_stats(K_V, Sig_V, R_sig_S)
+K_V       = 10 #@param {type:"slider", min:0, max:100}
+Sig_V      = 8 #@param {type:"slider", min:0, max:100}
+trajectory_stats = particle_trajectory_with_default_stats(K_V, Sig_V)
 #%%
-Max_occlusion = 3
-Quantile = 0.5
+Max_occlusion = 2
+Quantile = 0.4
 #%%
 tracer = tTracer(aSSociator, oOptimizer, trajectory_stats,
                 Max_occlusion, Quantile, sub_dir)
 #%%
-indx = 33
+indx = 15
 string = '/'+'test_new_constr _%i_'%indx+str(Max_occlusion)
 #%%
-tracer.dump_data(string, 15, 5)
+tracer.dump_data(string, 15, 10)
 #%%
 parameters = {name: eval(name) for name in dir() if name[0].isupper() and name != 'In' and name != 'Out'}
 import json

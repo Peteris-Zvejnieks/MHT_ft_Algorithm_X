@@ -39,7 +39,7 @@ class Graph_interpreter():
 
     def _find_by_node(self, node):
         for i, x in enumerate(self.trajectories):
-            if node in x.nodes: return i
+            if node == x.nodes[0] or node == x.nodes[-1]: return i
 
     def _trajectories(self):
         tmp_graph = self.graph.copy()
@@ -52,16 +52,12 @@ class Graph_interpreter():
         self.paths.sort(key = lambda x: -len(x.nodes))
         self.trajectories = list(map(self.node_trajectory, self.paths))
 
-    def events(self):
+    def _events(self):
         self.events = []
-        tmp_graph = self.graph.copy()
         likelihoods = nx.get_edge_attributes(self.graph, 'likelihood')
-        for entry in list(tmp_graph.out_edges(self.special_nodes[0])):   self.events.append([[self.special_nodes[0]],    [self._find_by_node(entry[1])],                 likelihoods[entry]])
-        for exitt in list(tmp_graph.in_edges( self.special_nodes[1])):   self.events.append([[self._find_by_node(exitt[0])],                 [self.special_nodes[1]],    likelihoods[exitt]])
-        tmp_graph.remove_nodes_from(self.special_nodes)
-        for node in tmp_graph.nodes:
-            if len(ins  := list(tmp_graph.in_edges( node))) > 1: self.events.append([list(map(lambda edge: self._find_by_node(edge[0]), ins)), [self._find_by_node(node)],  likelihoods[ ins[0]]])
-            if len(outs := list(tmp_graph.out_edges(node))) > 1: self.events.append([[self._find_by_node(node)], list(map(lambda edge: self._find_by_node(edge[1]), outs)), likelihoods[outs[1]]])
+        for i, trajectory in enumerate(self.trajectories):
+            self.events.append([[self.special_nodes[0]], [i], likelihoods[(self.special_nodes[0], trajectory.nodes[0])]])
+            self.events.append([[i], [self.special_nodes[1]], likelihoods[(trajectory.nodes[-1], self.special_nodes[1])]])
 
     def families(self):
         tmp_graph = self.graph.copy().to_undirected()
