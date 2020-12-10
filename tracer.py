@@ -19,8 +19,11 @@ class Tracer():
                  quantile,
                  path,
                  dim = 2):
-
-        self.dataset            = np.array(pd.read_excel('%s\\dataset.xlsx'%path))
+        
+        dataset = pd.read_excel('%s\\dataset.xlsx'%path)
+        self.dataset            = np.array(dataset)
+        self.header = dataset.columns
+        del(dataset)
         index                   = pd.MultiIndex.from_tuples(list(map(tuple, np.array(self.dataset, dtype = np.uint16)[:,:2])))
         self.multi_indexed      = pd.DataFrame(self.dataset[:,:2].astype(np.uint16), index = index)
         self.path               = path
