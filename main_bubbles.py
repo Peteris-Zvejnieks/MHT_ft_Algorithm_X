@@ -2,10 +2,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from stat_funcs import movement_likelihood_func, new_or_gone_likelihood_func, multi_bubble_likelihood_func
-from associator import Associator, asc_condition, comb_constr
+from associator import Associator as aAssociator
+from associator import asc_condition, comb_constr
 from optimizer import optimizer
 from trajectories import node_trajectory_with_stats
-from tracer import Tracer, unzip_images
+from tracer import unzip_images
+from tracer import Tracer as tTracer
 
 import glob
 import os
@@ -13,63 +15,68 @@ import os
 plt.rcParams['figure.dpi'] = 500
 np.set_printoptions(suppress=True)
 #%%
-Drive = 'C:\\'
-W_dir = Drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
+drive = 'C:\\'
+w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 #W_dir = r'C:\Users\FMOF\Documents\Work\Work Drive\Objects'
-os.chdir(W_dir)
+os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 6
+I = 12
 
 J = 0
 
-Main_dir = main_dirs[I]
-sub_dirs = glob.glob(Main_dir + '/*')
-try: sub_dirs.remove(*glob.glob(Main_dir + '/**.ini'))
+sub_dirs = glob.glob(main_dirs[I] + '/*')
+try: sub_dirs.remove(*glob.glob(main_dirs[I] + '/**.ini'))
 except: pass
-Sub_dir  = sub_dirs[J]
-print(Sub_dir)
-images = unzip_images('%s\\Compressed Data\\Shapes.zip'%Sub_dir)
+sub_dir  = sub_dirs[J]
+print(sub_dir)
+images = unzip_images('%s\\Compressed Data\\Shapes.zip'%sub_dir)
+del(I, J)
 #%%
-Sig_displacement1   = 50 #@param {type: "slider", min: 10, max: 100}
-K1                  = 0.1 #@param {type:"slider", min:0, max:1, step:0.01}
-Move   = movement_likelihood_func(Sig_displacement1, K1)
+Sig_displacement_translation   = 50 #@param {type: "slider", min: 10, max: 100}
+K_translation                  = 0.1 #@param {type:"slider", min:0, max:1, step:0.01}
+move   = movement_likelihood_func(Sig_displacement_translation, K_translation)
 
 A                   = 0.01 #@param {type:"slider", min:0.01, max:0.5, step:0.01}
 Boundary            = 100 #@param {type:"slider", min:0, max:50}
-Height              = 1806 #@param {type:"slider", min:0, max:1500}
-New    = new_or_gone_likelihood_func(A, Boundary, 1)
-Gone   = new_or_gone_likelihood_func(-A, Height - Boundary, 0)
+height              = 1806 #@param {type:"slider", min:0, max:1500}
+new    = new_or_gone_likelihood_func(A, Boundary, 1)
+gone   = new_or_gone_likelihood_func(-A, height - Boundary, 0)
 
-power = 3/2
-Sig_displacement2   = 50 #@param {type:"slider", min:0, max:150}
-K2                  = 0.1 #@param {type:"slider", min:0, max:1, step:0.01}
-Merge  = multi_bubble_likelihood_func(Sig_displacement2, K2, 0, power)
-Split  = multi_bubble_likelihood_func(Sig_displacement2, K2, 1, power)
+Power = 3/2
+Sig_displacement_split_merge  = 50 #@param {type:"slider", min:0, max:150}
+K_split_merge                  = 0.1 #@param {type:"slider", min:0, max:1, step:0.01}
+merge  = multi_bubble_likelihood_func(Sig_displacement_split_merge, K_split_merge, 0, Power)
+split  = multi_bubble_likelihood_func(Sig_displacement_split_merge, K_split_merge, 1, Power)
 
-Optimizer     = optimizer([Move, New, Gone, Merge, Split])
+oOptimizer     = optimizer([move, new, gone, merge, split])
 #%%
 Max_displacement_per_frame  = 300  #@param {type: "slider", min: 10, max: 500}
 Radius_multiplyer           = 5 #@param {type:"slider", min:1, max:10}
 Min_displacement            = 30 #@param {type:"slider", min:0, max:100}
-Asc_condition  = asc_condition(Max_displacement_per_frame, Radius_multiplyer, Min_displacement)
+aAsc_condition  = asc_condition(Max_displacement_per_frame, Radius_multiplyer, Min_displacement)
 
 Upsilon                     = 0.09 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
-Mu_v                        = 60 #@param {type:"slider", min:0, max:300}
+K_v                         = 60 #@param {type:"slider", min:0, max:300}
 Max_acc                     = 60 #@param {type:"slider", min:0, max:300}
-Comb_constr = comb_constr(Upsilon, Mu_v, Max_acc)
+cComb_constr = comb_constr(Upsilon, Mu_v, Max_acc)
 
-ASSociator = Associator(Asc_condition, Comb_constr)
+aAssociator = aAssociator(aAsc_condition, cComb_constr)
 #%%
-mu_V       = 50 #@param {type:"slider", min:0, max:100}
-sig_V      = 30 #@param {type:"slider", min:0, max:100}
-r_sig_S    = 25 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
-node_trajectory = node_trajectory_with_stats(mu_V, sig_V, r_sig_S)
+Mu_V       = 50 #@param {type:"slider", min:0, max:100}
+Sig_V      = 30 #@param {type:"slider", min:0, max:100}
+R_sig_S    = 25 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
+node_trajectory = node_trajectory_with_stats(Mu_V, Sig_V, R_sig_S)
 #%%
 Max_occlusion = 2
 Quantile = 0.05
-tracer = Tracer(ASSociator, Optimizer, node_trajectory, Max_occlusion, Quantile, Sub_dir)
+tracer = tTracer(ASSociator, oOptimizer, node_trajectory, Max_occlusion, Quantile, sub_dir)
 #%%
-Indx = 23
-Prepend = 'test_%i_'%Indx
-tracer.dump_data(images, '/'+Prepend+str(Max_occlusion), 15, 1)
+indx = 23
+prepend = 'test_%i_'%indx
+tracer.dump_data(images, '/'+prepend+str(Max_occlusion), 15, 1)
+#%%
+parameters = {name: eval(name) for name in dir() if name[0].isupper() and name != 'In' and name != 'Out'}
+import json
+with open(sub_dir + '/Tracer Output' + '/'+string + '/parameters.json', 'w') as fp: json.dump(parameters, fp)
+
