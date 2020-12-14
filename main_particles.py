@@ -19,7 +19,7 @@ w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 13
+I = 19
 
 J = 0
 
@@ -30,7 +30,7 @@ sub_dir = sub_dirs[J]
 print(sub_dir)
 del(I, J)
 #%%
-Sig_displacement1   = 8
+Sig_displacement1   = 6
 Sig_acc = 8
 KK_v = 8
 W1 = 0.7
@@ -46,10 +46,10 @@ gone    = new_or_gone_likelihood_func(-A, width - Boundary, 0, 0)
 
 oOptimizer   = optimizer([move, new, gone])
 #%%
-Soi = 12
+Soi = 16
 assc_condition  = asc_condition_particles(Soi)
 
-Mu_v = 20
+Mu_v = 22
 Max_acc = 8
 cComb_constr = comb_constr_particles(Mu_v, Max_acc)
 
@@ -65,7 +65,7 @@ Quantile = 0.4
 tracer = tTracer(aSSociator, oOptimizer, trajectory_stats,
                 Max_occlusion, Quantile, sub_dir)
 #%%
-indx = 15
+indx = 16
 string = '/'+'test_new_constr _%i_'%indx+str(Max_occlusion)
 #%%
 tracer.dump_data(string, 15, 10)
