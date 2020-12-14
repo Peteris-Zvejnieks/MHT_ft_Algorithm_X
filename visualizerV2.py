@@ -63,11 +63,18 @@ class Graph_interpreter():
             if len(ins  := list(tmp_graph.in_edges( node))) > 1: self.events.append([list(map(lambda edge: self._find_by_node(edge[0]), ins)), [self._find_by_node(node)],  likelihoods[ ins[0]]])
             if len(outs := list(tmp_graph.out_edges(node))) > 1: self.events.append([[self._find_by_node(node)], list(map(lambda edge: self._find_by_node(edge[1]), outs)), likelihoods[outs[1]]])
 
-    def families(self):
-        tmp_graph = self.graph.copy().to_undirected()
-        tmp_graph.remove_nodes_from(self.special_nodes)
-        self.families = list(self.graph.subgraph(c.union(set(self.special_nodes))) for c in nx.connected_components(tmp_graph))
+    def families(self):        
+        trajectory_graph = nx.DiGraph()
+        for event in self.events:
+            for source in event[0]:
+                for sink in event[1]:
+                    trajectory_graph.add_edge(source, sink)
+        
+        tmp_graph = trajectory_graph.copy().to_undirected()
+        trajectory_graph.remove_nodes_from(self.special_nodes)
+        self.families = list(trajectory_graph.subgraph(sub_g.union(set(self.special_nodes))) for sub_g in nx.connected_components(tmp_graph))
         self.families.sort(key = lambda graph: -len(list(graph.nodes)))
+        
 
 class Visualizer():
     def __init__(self, images, interpretation, /, width = 2):
@@ -99,15 +106,23 @@ class Visualizer():
         cmap = cm.plasma
         color_bar_gen = Colorbar_overlay(cmap, self.shape)
         families = self.interpretation.families
-        family_photos = np.zeros((len(families),) + self.shape, dtype = np.uint8)
+        family_photos = np.zeros((len(families),) + self.shape, dtype = np.uint8)        
         for i, family in tqdm(enumerate(families), desc = 'Drawing families '):
-            values = nx.get_edge_attributes(family, key)
-            min_max = [min(tuple(values.values()) + (1e3,)), max(tuple(values.values()) + (0,))]
-            for edge in values.keys():
-                color = self._map_color(cmap(self._normalizer(values[edge], min_max)))
-                family_photos[i] = self._draw_edge(family_photos[i], edge, color)
-            color_bar = color_bar_gen(min_max)
-            family_photos[i] = np.where(color_bar != 0, color_bar, family_photos[i])
+            dcmap = discrete_colormap(len(family.nodes) - 2)
+            if key != 'ID': 
+                values = np.array([self.trajectories[node].likelihoods for node in family if type(node) is int]).flatten()
+                min_max = [np.min(values), np.max(values)]
+            for j, node in enumerate(family):
+                trajectory = self.trajectories[node]
+                color = self._map_color(dcmap(j))
+                if key != 'ID': 
+                    values = trajectory.backbone.get_edge_attributes(key)
+                    color_bar = color_bar_gen(min_max)
+                    family_photos[i] = np.where(color_bar != 0, color_bar, family_photos[i])
+                for edge in trajectory.backbone.edges:
+                    if key != 'ID': color = self._map_color(cmap(self._normalizer(values[edge], min_max)))
+                    family_photos[i] = self._draw_edge(family_photos[i], edge, color)
+                    
         return family_photos
 
     def ShowHistory(self, memory = 15, min_trajectory_size = 1, key = 'velocity'):

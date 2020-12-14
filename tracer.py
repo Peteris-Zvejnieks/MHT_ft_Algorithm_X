@@ -149,7 +149,7 @@ class Tracer():
         map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
         save_func(output_path + '/trajectories',      Vis.ShowTrajectories())
 
-        cols = ['dt'] + ['d'+x for x in self.columns[2:]] + ['likelihoods']
+        cols = ['dt'] + ['d'+x for x in self.header[2:]] + ['likelihoods']
         for i, track in enumerate(interpretation.trajectories):
             table = pd.DataFrame(data = track.data, columns = self.header)
             table.to_csv(output_path + '/trajectories/data_%i.csv'%i)
@@ -174,7 +174,7 @@ def unzip_images(path):
         names = zp.namelist()
         try:    names.remove(*[x for x in names if len(x.split('/')[-1]) == 0 or x.split(',')[-1] == 'ini'])
         except: pass
-        names.sort(key = lambda x: int(x.split('/')[-1].split('_')[-1].split('.')[0]))
+        names.sort(key = lambda x: int(x.split('/')[-1].split('_')[-1].split('exp')[-1].split('.')[0]))
         images = list(map(imgFromZip, tqdm(names, desc = 'Loading images ')))
 
     scaler_f = lambda x: (2**-8 * int(np.max(x) >= 256) + int(np.max(x) < 256) + 254 * int(np.max(x) == 1))

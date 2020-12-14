@@ -35,7 +35,7 @@ class optimizer():
             mem = [0, 0]
             for x in self.iter:
                 likelihood = np.prod(likelihoods[(x, pos)])
-                if likelihood > mem[1]: mem = [x, likelihood]
+                if likelihood > mem[1]: mem = [list(x), likelihood]
             if mem[1] == 0: optimizer.Likelihood0(len(X))
             for j, i in enumerate(collection): X[i] = mem[0][j]
         return [X, self.all_likelihoods[(X, self.pos)], np.prod(self.all_likelihoods[(X, self.pos)])]

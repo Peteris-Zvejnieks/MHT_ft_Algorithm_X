@@ -21,7 +21,7 @@ w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 0
+I = 3
 
 J = 0
 
@@ -51,7 +51,7 @@ split  = multi_bubble_likelihood_func(Sig_displacement_split_merge, K_split_merg
 
 oOptimizer     = optimizer([move, new, gone, merge, split])
 #%%
-Max_displacement_per_frame  = 500  #@param {type: "slider", min: 10, max: 500}
+Max_displacement_per_frame  = 400  #@param {type: "slider", min: 10, max: 500}
 Radius_multiplyer           = 5 #@param {type:"slider", min:1, max:10}
 Min_displacement            = 30 #@param {type:"slider", min:0, max:100}
 aAsc_condition  = asc_condition(Max_displacement_per_frame, Radius_multiplyer, Min_displacement)
