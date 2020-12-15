@@ -19,7 +19,7 @@ class Tracer():
                  quantile,
                  path,
                  dim = 2):
-                 
+
         self.dataset            = np.array(pd.read_excel('%s\\dataset.xlsx'%path))
         index                   = pd.MultiIndex.from_tuples(list(map(tuple, np.array(self.dataset, dtype = np.uint16)[:,:2])))
         self.multi_indexed      = pd.DataFrame(self.dataset[:,:2].astype(np.uint16), index = index)
@@ -154,7 +154,7 @@ class Tracer():
 
         with open(output_path + '/trajectories/events.csv', 'w') as file:
             events_str = ''
-            for event in interpretation.events: events_str += str(event) + '\n'
+            for event in interpretation.Events: events_str += str(event) + '\n'
             file.write(events_str)
 
         save_func(output_path + '/families',          Vis.ShowFamilies('likelihood'))
