@@ -19,7 +19,7 @@ W_dir = r'C:\Users\FMOF\Documents\Work\Work Drive\Objects'
 os.chdir(W_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 5
+I = 6
 
 J = 0
 
@@ -30,18 +30,18 @@ except: pass
 Sub_dir  = sub_dirs[J]
 print(Sub_dir)
 #%%
-Sig_displacement1   = 50  #@param {type: "slider", min: 10, max: 100}
-K1                  = 0.3 #@param {type:"slider", min:0, max:1, step:0.01}
+Sig_displacement1   = 40  #@param {type: "slider", min: 10, max: 100}
+K1                  = 0.5 #@param {type:"slider", min:0, max:1, step:0.01}
 Move   = movement_likelihood_func(Sig_displacement1, K1)
 
 A                   = 0.1 #@param {type:"slider", min:0.01, max:0.5, step:0.01}
 Boundary            = 20 #@param {type:"slider", min:0, max:50}
-Height              = 919 #@param {type:"slider", min:0, max:1500}
+Height              = 1208 #@param {type:"slider", min:0, max:1500}
 New    = new_or_gone_likelihood_func(A, Boundary, 1)
 Gone   = new_or_gone_likelihood_func(-A, Height - Boundary, 0)
 
 Sig_displacement2   = 64 #@param {type:"slider", min:0, max:150}
-K2                  = 0.5 #@param {type:"slider", min:0, max:1, step:0.01}
+K2                  = 0.6 #@param {type:"slider", min:0, max:1, step:0.01}
 Merge  = multi_bubble_likelihood_func(Sig_displacement2, K2, 0)
 Split  = multi_bubble_likelihood_func(Sig_displacement2, K2, 1)
 
@@ -49,7 +49,7 @@ Optimizer     = optimizer([Move, New, Gone, Merge, Split])
 #%%
 Max_displacement_per_frame  = 300  #@param {type: "slider", min: 10, max: 500}
 Radius_multiplyer           = 4 #@param {type:"slider", min:1, max:10}
-Min_displacement            = 30 #@param {type:"slider", min:0, max:100}
+Min_displacement            = 40 #@param {type:"slider", min:0, max:100}
 Asc_condition  = asc_condition(Max_displacement_per_frame, Radius_multiplyer, Min_displacement)
 
 Upsilon                     = 1.5 #@param {type:"slider", min:0.01, max:1.5, step:0.01}

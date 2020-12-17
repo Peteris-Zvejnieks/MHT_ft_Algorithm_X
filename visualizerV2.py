@@ -80,6 +80,7 @@ class Visualizer():
         self.shape  = images[0].shape
         self.interpretation = interpretation
         self.trajectories = self.interpretation.trajectories
+        self.special_nodes = interpretation.special_nodes
         self.width = 2
         self.data = nx.get_node_attributes(self.interpretation.graph, 'data')
 
@@ -123,27 +124,27 @@ class Visualizer():
                     trajectory = self.trajectories[ID]
                     if key != 'ID':
                         values = nx.get_edge_attributes(trajectory.backbone, key)
-                        color_mapper = lambda edge: self._map_color(cmap(self._normalizer(values[edge], min_max)))
+                        color_mapper = lambda likelihood: self._map_color(cmap(self._normalizer(likelihood, min_max)))
                     else: color = color_mapper(j)
                     for edge in trajectory.backbone.edges:
-                        if key != 'ID': color = color_mapper(edge)
+                        if key != 'ID': color = color_mapper(values[edge])
                         family_photos[i] = self._draw_edge(family_photos[i], edge, color)
-                    crd = list(trajectory.positions[int(trajectory.positions.shape[0]/2),:] + np.array([30, 0])).reverse()
-                    family_photos[i] =  cv2.putText(family_photos[i], str(j), tuple(crd), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
                 except TypeError: continue
+                crd = self._get_node_crd(trajectory.nodes[int(len(trajectory.nodes)/2)])
+                family_photos[i] =  cv2.putText(family_photos[i], str(ID), crd, cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255),2)
 
             for edge in family.edges:
                 if key != 'ID': color = color_mapper(edge_values[edge])
                 if edge[0] == self.special_nodes[0]:
                     if key == 'ID': color = (0,  0, 255)
                     R = int(self.width * 2)
-                    crd = self._get_node_crd(self.trajectories[ID].nodes[0])
-                    family_photos[i] = cv2.circle(family_photos, crd, R, color, self.width)
+                    crd = self._get_node_crd(self.trajectories[edge[1]].nodes[0])
+                    family_photos[i] = cv2.circle(family_photos[i], crd, R, color, self.width)
                 elif edge[1] == self.special_nodes[1]:
                     if key == 'ID': color = (0, 255, 0)
                     R = int(self.width * 3)
-                    crd = self._get_node_crd(self.trajectories[ID].nodes[0])
-                    family_photos[i] = cv2.circle(family_photos, crd, R, color, self.width)
+                    crd = self._get_node_crd(self.trajectories[edge[0]].nodes[-1])
+                    family_photos[i] = cv2.circle(family_photos[i], crd, R, color, self.width)
                 else:
                     if key == 'ID':
                         if len(family._succ[edge[0]]) > 1:   color = (255, 0, 255)
