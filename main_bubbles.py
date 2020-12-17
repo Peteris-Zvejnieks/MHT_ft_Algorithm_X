@@ -14,12 +14,12 @@ plt.rcParams['figure.dpi'] = 500
 np.set_printoptions(suppress=True)
 #%%
 Drive = 'C:\\'
-W_dir = Drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
-#W_dir = r'C:\Users\FMOF\Documents\Work\Work Drive\Objects'
+# W_dir = Drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
+W_dir = r'C:\Users\FMOF\Documents\Work\Work Drive\Objects'
 os.chdir(W_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 17
+I = 5
 
 J = 0
 

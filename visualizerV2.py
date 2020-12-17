@@ -54,13 +54,13 @@ class Graph_interpreter():
 
     def events(self):
         self.Events = []
-        for i, trajectory in enumerate(trajectories):
+        for i, trajectory in enumerate(self.trajectories):
             ins  = self.graph._pred[trajectory.nodes[0]]
-            if list(ins.keys())[0] == self.special_nodes[0]: self.Events.append([[self.special_nodes[0]], [i], list(ins.values())[0]]])
-            elif len(ins) > 1: self.Events.append([[self._find_by_node(x) for x in ins.keys()] , [i], liset(ins.values())[0]])
+            if list(ins.keys())[0] == self.special_nodes[0]: self.Events.append([[self.special_nodes[0]], [i], list(ins.values())[0]['likelihood']])
+            elif len(ins) > 1: self.Events.append([[self._find_by_node(x) for x in ins.keys()] , [i], list(ins.values())[0]['likelihood']])
             outs = self.graph._succ[trajectory.nodes[-1]]
-            if list(outs.keys())[0] == self.special_nodes[1]: self.Events.append([[i], [self.special_nodes[1]], list(outs.values())[0]])
-            elif len(outs) > 1: self.Events.append([[i], [self._find_by_node(x) for x in outs.keys()], list(outs.values())[0]])
+            if list(outs.keys())[0] == self.special_nodes[1]: self.Events.append([[i], [self.special_nodes[1]], list(outs.values())[0]['likelihood']])
+            elif len(outs) > 1: self.Events.append([[i], [self._find_by_node(x) for x in outs.keys()], list(outs.values())[0]['likelihood']])
 
     def families(self):
         smol_graph = nx.DiGraph()
@@ -107,11 +107,11 @@ class Visualizer():
         family_photos = np.zeros((len(families),) + self.shape, dtype = np.uint8)
 
         for i, family in tqdm(enumerate(families), desc = 'Drawing families '):
-            if key != ID:
-                edge_values = family.get_edge_attributes(key)
+            if key != 'ID':
+                edge_values = nx.get_edge_attributes(family, key)
                 values = list(edge_values.values())
                 for ID in family.nodes:
-                    try: values.extend(list(self.trajectories[ID].backbone.get_edge_attributes(key).values()))
+                    try: values.extend(list(nx.get_edge_attributes(self.trajectories[ID].backbone, key).values()))
                     except: continue
                 min_max = [min(values), max(values)]
             else:
@@ -122,12 +122,15 @@ class Visualizer():
                 try:
                     trajectory = self.trajectories[ID]
                     if key != 'ID':
-                        values = trajectory.backbone.get_edge_attributes(key)
+                        values = nx.get_edge_attributes(trajectory.backbone, key)
                         color_mapper = lambda edge: self._map_color(cmap(self._normalizer(values[edge], min_max)))
                     else: color = color_mapper(j)
                     for edge in trajectory.backbone.edges:
                         if key != 'ID': color = color_mapper(edge)
                         family_photos[i] = self._draw_edge(family_photos[i], edge, color)
+                    crd = list(trajectory.positions[int(trajectory.positions.shape[0]/2),:] + np.array([30, 0])).reverse()
+                    family_photos[i] =  cv2.putText(family_photos[i], str(j), tuple(crd), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
+                except TypeError: continue
 
             for edge in family.edges:
                 if key != 'ID': color = color_mapper(edge_values[edge])
@@ -138,9 +141,9 @@ class Visualizer():
                     family_photos[i] = cv2.circle(family_photos, crd, R, color, self.width)
                 elif edge[1] == self.special_nodes[1]:
                     if key == 'ID': color = (0, 255, 0)
-                        R = int(self.width * 3)
-                        crd = self._get_node_crd(self.trajectories[ID].nodes[0])
-                        family_photos[i] = cv2.circle(family_photos, crd, R, color, self.width)
+                    R = int(self.width * 3)
+                    crd = self._get_node_crd(self.trajectories[ID].nodes[0])
+                    family_photos[i] = cv2.circle(family_photos, crd, R, color, self.width)
                 else:
                     if key == 'ID':
                         if len(family._succ[edge[0]]) > 1:   color = (255, 0, 255)
@@ -187,7 +190,7 @@ class Visualizer():
                 t0 = int(self.trajectories[starts[0]].data[0, 0])
                 f = lambda x: self._draw_merger(x, stops, starts[0])
             elif len(starts) > 1:
-                t0 = int(min([self.trajectories[x].data[0,0] for x in starts)
+                t0 = int(min([self.trajectories[x].data[0,0] for x in starts]))
                 f = lambda x: self._draw_split(x, stops[0], starts)
             for t in range(t0, min(len(images), t0 + memory)): images[t - 1] = f(images[t - 1])
         return images
