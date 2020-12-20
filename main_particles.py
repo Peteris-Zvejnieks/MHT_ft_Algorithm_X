@@ -19,7 +19,7 @@ w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 19
+I = 1
 
 J = 0
 
@@ -32,8 +32,8 @@ del(I, J)
 #%%
 Sig_displacement1   = 6
 Sig_acc = 8
-KK_v = 8
-W1 = 0.7
+KK_v = 6
+W1 = 0.6
 W2 = 0.5
 move    = paricle_movement_likelihood(Sig_displacement1, Sig_acc, KK_v, W1, W2)
 
@@ -46,7 +46,7 @@ gone    = new_or_gone_likelihood_func(-A, width - Boundary, 0, 0)
 
 oOptimizer   = optimizer([move, new, gone])
 #%%
-Soi = 16
+Soi = 17
 assc_condition  = asc_condition_particles(Soi)
 
 Mu_v = 22
@@ -60,12 +60,12 @@ Sig_V      = 8 #@param {type:"slider", min:0, max:100}
 trajectory_stats = particle_trajectory_with_default_stats(K_V, Sig_V)
 #%%
 Max_occlusion = 2
-Quantile = 0.4
+Quantile = 0.6
 #%%
 tracer = tTracer(aSSociator, oOptimizer, trajectory_stats,
                 Max_occlusion, Quantile, sub_dir)
 #%%
-indx = 16
+indx = 20
 string = '/'+'test_new_constr _%i_'%indx+str(Max_occlusion)
 #%%
 tracer.dump_data(string, 15, 10)
