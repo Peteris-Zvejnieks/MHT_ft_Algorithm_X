@@ -138,14 +138,20 @@ class Tracer():
             except FileExistsError:
                 for old_img in glob.glob(path+'/**.jpg'): os.remove(old_img)
             for i, x in tqdm(enumerate(imgs), desc = 'Saving: ' + path.split('/')[-1]): imageio.imwrite(path+'/%i.jpg'%i, x)
-
+        
+        
+        
         nx.readwrite.gml.write_gml(self.graph, output_path + '/graph.gml', stringizer = lambda x: str(x))
         interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
-        self.trajectories = interpretation.trajectories
+        
         interpretation.events()
         interpretation.families()
+        
+        self.trajectories = interpretation.trajectories
         Vis = Visualizer(self.images, interpretation)
         self.Vis  = Vis
+        save_func(output_path + '/families',          Vis.ShowFamilies('likelihood'))
+        save_func(output_path + '/families',          Vis.ShowFamilies('ID'))
         map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
         save_func(output_path + '/trajectories',      Vis.ShowTrajectories())
 
@@ -159,10 +165,10 @@ class Tracer():
 
         with open(output_path + '/trajectories/events.csv', 'w') as file:
             events_str = ''
-            for event in interpretation.events: events_str += str(event) + '\n'
+            for event in interpretation.Events: events_str += str(event) + '\n'
             file.write(events_str)
 
-        save_func(output_path + '/families',          Vis.ShowFamilies('likelihood'))
+        
         save_func(output_path + '/tracedIDs',         Vis.ShowHistory(memory, smallest_trajectories, 'ID'))
         save_func(output_path + '/traced_velocities', Vis.ShowHistory(memory, smallest_trajectories, 'velocity'))
 

@@ -53,25 +53,24 @@ class Graph_interpreter():
         self.trajectories = list(map(self.node_trajectory, self.paths))
 
     def events(self):
-        self.events = []
-        tmp_graph = self.graph.copy()
-        likelihoods = nx.get_edge_attributes(self.graph, 'likelihood')
-        for entry in list(tmp_graph.out_edges(self.special_nodes[0])):   self.events.append([[self.special_nodes[0]],    [self._find_by_node(entry[1])],                 likelihoods[entry]])
-        for exitt in list(tmp_graph.in_edges( self.special_nodes[1])):   self.events.append([[self._find_by_node(exitt[0])],                 [self.special_nodes[1]],    likelihoods[exitt]])
-        tmp_graph.remove_nodes_from(self.special_nodes)
-        for node in tmp_graph.nodes:
-            if len(ins  := list(tmp_graph.in_edges( node))) > 1: self.events.append([list(map(lambda edge: self._find_by_node(edge[0]), ins)), [self._find_by_node(node)],  likelihoods[ ins[0]]])
-            if len(outs := list(tmp_graph.out_edges(node))) > 1: self.events.append([[self._find_by_node(node)], list(map(lambda edge: self._find_by_node(edge[1]), outs)), likelihoods[outs[1]]])
-
+        self.Events = []
+        for i, trajectory in enumerate(self.trajectories):
+            ins  = self.graph._pred[trajectory.nodes[0]]
+            if list(ins.keys())[0] == self.special_nodes[0]: self.Events.append([[self.special_nodes[0]], [i], list(ins.values())[0]['likelihood']])
+            elif len(ins) > 1: self.Events.append([[self._find_by_node(x) for x in ins.keys()] , [i], list(ins.values())[0]['likelihood']])
+            outs = self.graph._succ[trajectory.nodes[-1]]
+            if list(outs.keys())[0] == self.special_nodes[1]: self.Events.append([[i], [self.special_nodes[1]], list(outs.values())[0]['likelihood']])
+            elif len(outs) > 1: self.Events.append([[i], [self._find_by_node(x) for x in outs.keys()], list(outs.values())[0]['likelihood']])
+            
     def families(self):        
         trajectory_graph = nx.DiGraph()
-        for event in self.events:
+        for event in self.Events:
             for source in event[0]:
                 for sink in event[1]:
-                    trajectory_graph.add_edge(source, sink)
+                    trajectory_graph.add_edge(source, sink, likelihood = event[2])
         
         tmp_graph = trajectory_graph.copy().to_undirected()
-        trajectory_graph.remove_nodes_from(self.special_nodes)
+        tmp_graph.remove_nodes_from(self.special_nodes)
         self.families = list(trajectory_graph.subgraph(sub_g.union(set(self.special_nodes))) for sub_g in nx.connected_components(tmp_graph))
         self.families.sort(key = lambda graph: -len(list(graph.nodes)))
         
@@ -81,6 +80,7 @@ class Visualizer():
         self.images = images
         self.shape  = images[0].shape
         self.interpretation = interpretation
+        self.special_nodes = self.interpretation.special_nodes
         self.trajectories = self.interpretation.trajectories
         self.width = 6
         self.data = nx.get_node_attributes(self.interpretation.graph, 'data')
@@ -106,27 +106,60 @@ class Visualizer():
         cmap = cm.plasma
         color_bar_gen = Colorbar_overlay(cmap, self.shape)
         families = self.interpretation.families
-        family_photos = np.zeros((len(families),) + self.shape, dtype = np.uint8)        
+        family_photos = np.zeros((len(families),) + self.shape, dtype = np.uint8)
+
         for i, family in tqdm(enumerate(families), desc = 'Drawing families '):
-            dcmap = discrete_colormap(len(family.nodes) - 2)
-            if key != 'ID': 
-                values = np.array([self.trajectories[node].likelihoods for node in family if type(node) is int]).flatten()
-                min_max = [np.min(values), np.max(values)]
-            for j, node in enumerate(family):
-                trajectory = self.trajectories[node]
-                color = self._map_color(dcmap(j))
-                if key != 'ID': 
-                    values = trajectory.backbone.get_edge_attributes(key)
-                    color_bar = color_bar_gen(min_max)
-                    family_photos[i] = np.where(color_bar != 0, color_bar, family_photos[i])
-                for edge in trajectory.backbone.edges:
-                    if key != 'ID': color = self._map_color(cmap(self._normalizer(values[edge], min_max)))
+            if key != 'ID':
+                edge_values = nx.get_edge_attributes(family, key)
+                values = list(edge_values.values())
+                for ID in family.nodes:
+                    try: values.extend(list(nx.get_edge_attributes(self.trajectories[ID].backbone, key).values()))
+                    except: continue
+                min_max = [min(values), max(values)]
+            else:
+                dcmap = discrete_colormap(len(family.nodes))
+                color_mapper = lambda indx: self._map_color(dcmap(indx))
+
+            for j, ID in enumerate(family.nodes):
+                try:
+                    trajectory = self.trajectories[ID]
+                    if key != 'ID':
+                        values = nx.get_edge_attributes(trajectory.backbone, key)
+                        color_mapper = lambda likelihood: self._map_color(cmap(self._normalizer(likelihood, min_max)))
+                    else: color = color_mapper(j)
+                    for edge in trajectory.backbone.edges:
+                        if key != 'ID': color = color_mapper(values[edge])
+                        family_photos[i] = self._draw_edge(family_photos[i], edge, color)
+                except TypeError: continue
+                crd = self._get_node_crd(trajectory.nodes[int(len(trajectory.nodes)/2)])
+                family_photos[i] =  cv2.putText(family_photos[i], str(ID), crd, cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255),2)
+
+            for edge in family.edges:
+                if key != 'ID': color = color_mapper(edge_values[edge])
+                if edge[0] == self.special_nodes[0]:
+                    if key == 'ID': color = (0,  0, 255)
+                    R = int(self.width * 2)
+                    crd = self._get_node_crd(self.trajectories[edge[1]].nodes[0])
+                    family_photos[i] = cv2.circle(family_photos[i], crd, R, color, self.width)
+                elif edge[1] == self.special_nodes[1]:
+                    if key == 'ID': color = (0, 255, 0)
+                    R = int(self.width * 3)
+                    crd = self._get_node_crd(self.trajectories[edge[0]].nodes[-1])
+                    family_photos[i] = cv2.circle(family_photos[i], crd, R, color, self.width)
+                else:
+                    if key == 'ID':
+                        if len(family._succ[edge[0]]) > 1:   color = (255, 0, 255)
+                        elif len(family._pred[edge[1]]) > 1: color = (255, 0, 0)
+                    edge = (self.trajectories[edge[0]].nodes[-1], self.trajectories[edge[1]].nodes[0])
                     family_photos[i] = self._draw_edge(family_photos[i], edge, color)
-                    
+
+            if key != 'ID':
+                color_bar = color_bar_gen(min_max)
+                family_photos[i] = np.where(color_bar != 0, color_bar, family_photos[i])
         return family_photos
 
     def ShowHistory(self, memory = 15, min_trajectory_size = 1, key = 'velocity'):
-        events = self.interpretation.events
+        events = self.interpretation.Events
         images = copy.deepcopy(self.images)
         dcmap = discrete_colormap(memory * 2)
         cmap = cm.plasma
@@ -165,7 +198,7 @@ class Visualizer():
         return images
 
     def _draw_merger(self, img, starts, stop):
-        color=  (255, 255, 0)
+        color=  (255, 0, 0)
         crd2 = self._get_node_crd(self.trajectories[stop].nodes[0])
         for start in starts:
             crd1 = self._get_node_crd(self.trajectories[start].nodes[-1])

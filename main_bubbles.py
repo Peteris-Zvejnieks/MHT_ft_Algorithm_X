@@ -19,9 +19,9 @@ drive = 'C:\\'
 w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 #W_dir = r'C:\Users\FMOF\Documents\Work\Work Drive\Objects'
 os.chdir(w_dir)
-main_dirs = sorted(glob.glob('./*'))
+main_dirs = sorted([x for x in glob.glob('./*') if '.' not in x[1:]])
 #%%
-I = 3
+I = 2
 
 J = 0
 
@@ -56,7 +56,7 @@ Radius_multiplyer           = 5 #@param {type:"slider", min:1, max:10}
 Min_displacement            = 30 #@param {type:"slider", min:0, max:100}
 aAsc_condition  = asc_condition(Max_displacement_per_frame, Radius_multiplyer, Min_displacement)
 
-Upsilon                     = 0.09 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
+Upsilon                     = 0.2 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
 K_v                         = 60 #@param {type:"slider", min:0, max:300}
 Max_acc                     = 60 #@param {type:"slider", min:0, max:300}
 cComb_constr = comb_constr(Upsilon, K_v, Max_acc)
